@@ -1,5 +1,5 @@
 {
-  "name": "codex-digest-plugin",
+  "name": "codex-digests-plugin",
   "version": "0.2.3",
   "private": true,
   "type": "module",
