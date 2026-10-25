@@ -9,7 +9,7 @@ test('panel refreshes through data tools and honors host selection without reope
   const html = await readFile(new URL('../templates/backend/ui/index.html', import.meta.url), 'utf8');
   const elements = new Map(), listeners = new Map(), calls = [];
   const element = () => ({
-    value: '', hidden: false, dataset: {}, children: [], classList: { toggle() {} },
+    value: '', hidden: false, dataset: {}, style: { setProperty(name, value) { this[name] = value; } }, children: [], classList: { toggle() {} },
     append(...children) { this.children.push(...children); },
     replaceChildren(...children) { this.children = children; },
     setAttribute() {}, showModal() { this.open = true; }, close() { this.open = false; }
@@ -20,7 +20,7 @@ test('panel refreshes through data tools and honors host selection without reope
   parent = { postMessage(message) {
     if (!message.id) return;
     queueMicrotask(() => {
-      if (message.method === 'ui/initialize') return emit({ id: message.id, result: { hostContext: { theme: 'dark' } } });
+      if (message.method === 'ui/initialize') return emit({ id: message.id, result: { hostContext: { theme: 'dark', safeAreaInsets: { top: 64, right: 0, bottom: 34, left: 0 } } } });
       assert.equal(message.method, 'tools/call');
       const { name, arguments: args } = message.params; calls.push({ name, args });
       const data = name === 'list_digests' ? { digests }
@@ -41,6 +41,20 @@ test('panel refreshes through data tools and honors host selection without reope
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(elements.get('digest-select').value, 'first');
   assert.equal(document.documentElement.dataset.theme, 'dark');
+  const style = document.documentElement.style;
+  assert.equal(style['--safe-top'], '64px');
+  assert.equal(style['--safe-bottom'], '34px');
+  emit({ method: 'ui/notifications/host-context-changed', params: { theme: 'light' } });
+  assert.equal(document.documentElement.dataset.theme, 'light');
+  assert.equal(style['--safe-top'], '64px', 'unrelated context updates preserve the safe area');
+  emit({ method: 'ui/notifications/host-context-changed', params: { safeAreaInsets: { top: 0, right: 44, bottom: 21, left: 44 } } });
+  assert.equal(style['--safe-top'], '0px', 'returning to zero clears the previous header inset');
+  assert.equal(style['--safe-right'], '44px');
+  assert.equal(style['--safe-left'], '44px');
+  assert.equal(style['--safe-bottom'], '21px');
+  emit({ method: 'ui/notifications/host-context-changed', params: { safeAreaInsets: { top: -1, right: 'bad' } } });
+  assert.equal(style['--safe-top'], '0px');
+  assert.equal(style['--safe-right'], '44px');
   emit({ method: 'ui/notifications/tool-result', params: { structuredContent: { digests, selected_digest_id: 'second' } } });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(elements.get('digest-select').value, 'second');

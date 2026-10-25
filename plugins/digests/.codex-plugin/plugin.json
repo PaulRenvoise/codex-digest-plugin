@@ -1,6 +1,6 @@
 {
   "name": "digests",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Create a personal Digests backend on ChatGPT Sites, connect an existing deployment, and curate digests that learn from your votes.",
   "author": {
     "name": "Paul Renvoise"

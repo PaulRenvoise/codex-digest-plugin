@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Digests</title>
 <style>
 :root{color-scheme:light dark;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee;font:14px/1.5 system-ui,-apple-system,sans-serif}
@@ -8,6 +8,12 @@
 :root[data-theme="dark"]{color-scheme:dark;--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:850px;margin:auto;padding:16px}button,input,select,textarea{font:inherit;color:inherit}button{padding:8px 12px;min-height:40px;background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer}button:hover{background:var(--soft)}button:disabled{opacity:.5;cursor:wait}button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}.primary{background:var(--ink);color:var(--bg)}input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;max-width:100%;font:inherit}textarea{width:100%;resize:vertical}.toolbar,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar select,.controls select{flex:1;min-width:120px}#status{font-size:12px;color:var(--muted);margin:8px 0}#status:empty{display:none}#status.error,#form-error{color:#c44}.card{padding:18px 0;border-bottom:1px solid var(--line)}.meta{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;color:var(--muted)}.card h2{font-size:17px;line-height:1.4;margin:8px 0;font-weight:600}.card a{color:inherit;text-decoration:none}.card a:hover{text-decoration:underline}.summary{margin:8px 0 12px}.tags{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:11px;margin-bottom:10px}.tag{padding:2px 6px;background:var(--soft);border-radius:4px}.actions{margin:0}.actions button{min-width:42px;font-size:17px}.update,.help{font-size:12px;color:var(--muted)}.empty{padding:25px 0;color:var(--muted)}dialog{width:min(540px,calc(100% - 24px));max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px}dialog::backdrop{background:#0005}dialog h2{font-size:18px;margin:0 0 15px}form label{display:block;margin:14px 0 5px;font-weight:600}form input{width:100%}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}[hidden]{display:none!important}@media(max-width:440px){main{padding:12px}.toolbar{gap:6px}.toolbar button{padding:8px}}
 .schedule-row{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;white-space:nowrap;overflow-x:auto;padding-bottom:2px}.schedule-row>*{flex-shrink:0}.schedule-row label{margin:0;font-weight:400}.schedule-row input{width:58px}.schedule-row select{flex:0 0 auto;padding:9px 5px}.schedule-field{display:flex;gap:6px;align-items:center}#frequency{width:auto}#item-count{width:90px}
+/* The host reserves space for its header and mobile system controls. Keep the
+   scrolling library and top-layer dialog inside the same safe rectangle. */
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
+body{height:100vh;height:100dvh;overflow:hidden;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left)}
+main{width:100%;height:100%;overflow:auto;overflow-wrap:anywhere}
+dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 12px);margin:auto;width:min(540px,calc(100% - var(--safe-left) - var(--safe-right) - 24px));max-height:calc(100% - var(--safe-top) - var(--safe-bottom) - 24px)}
 </style></head><body><main>
   <div class="toolbar"><button id="new" class="quiet">+ New digest</button></div>
   <div id="library" hidden>
@@ -47,6 +53,15 @@
       const id = ++rpcId, timer = setTimeout(() => { pending.delete(id); reject(new Error('The app did not confirm the request. Refresh to check its state.')); }, timeout);
       pending.set(id, { resolve, reject, timer }); post({ id, method, params });
     });
+  }
+  function applyHostContext(context = {}) {
+    if (context.theme) document.documentElement.dataset.theme = context.theme;
+    if (context.safeAreaInsets) {
+      for (const side of ['top', 'right', 'bottom', 'left']) {
+        const value = context.safeAreaInsets[side];
+        if (Number.isFinite(value) && value >= 0) document.documentElement.style.setProperty(`--safe-${side}`, `${value}px`);
+      }
+    }
   }
   function status(text = '', error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
   function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
@@ -223,12 +238,12 @@
       ++refreshSequence; digests = data.digests; selectedId = data.selected_digest_id; renderHeader();
       if (selectedId) loadView(); else { empty('', 'No digests yet.'); status(''); }
     }
-    if (m.method === 'ui/notifications/host-context-changed' && m.params?.theme) document.documentElement.dataset.theme = m.params.theme;
+    if (m.method === 'ui/notifications/host-context-changed') applyHostContext(m.params);
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
-    .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+    .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();
 })();
