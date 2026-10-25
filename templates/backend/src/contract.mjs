@@ -1,4 +1,4 @@
-export const VERSION = '0.2.2';
+export const VERSION = '0.2.3';
 export const UI_URI = `ui://digest/library-${VERSION}.html`;
 export class DigestError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -9,12 +9,12 @@ const object = (properties, required = Object.keys(properties)) => ({ type: 'obj
 const page = { type: 'integer', minimum: 0, maximum: 1000000 };
 const revision = { type: 'integer', minimum: 0, maximum: 2147483647 };
 const scheduleSchema = object({
-  frequency: { type: 'string', enum: ['manual', 'daily', 'weekly', 'monthly'] },
+  frequency: { type: 'string', enum: ['daily', 'weekly', 'monthly'] },
   hour: { type: 'integer', minimum: 0, maximum: 23 },
   weekday: { type: 'integer', minimum: 0, maximum: 6, description: 'Weekly: 0 is Sunday, 1 is Monday.' },
   month_day: { type: 'integer', minimum: 1, maximum: 31, description: 'Monthly date; shorter months use their last day.' },
   utc_offset_minutes: { type: 'integer', minimum: -720, maximum: 840, description: 'Fixed UTC offset in minutes, in whole hours. UTC+2 is 120. No daylight saving.' }
-}, ['frequency']);
+}, ['frequency', 'hour', 'utc_offset_minutes']);
 const digestFields = { name: str(100), prompt: { ...str(16000), description: 'What to look for: topics, interests, depth, freshness and exclusions. Digest controls presentation.' }, domains: { type: 'array', items: str(2048), maxItems: 100 },
   items_per_edition: { type: 'integer', minimum: 1, maximum: 30, description: 'Target count; default 12. Return fewer rather than pad a weak selection.' }, schedule: scheduleSchema };
 const itemFields = {
@@ -88,9 +88,8 @@ export function validateTool(name, args) {
   if (!Object.hasOwn(schema, name)) throw new DigestError('Unknown tool.', 404);
   validate(args, schema[name]);
 }
-export function normalizeSchedule(input = { frequency: 'manual' }) {
+export function normalizeSchedule(input = { frequency: 'daily', hour: 9, utc_offset_minutes: 0 }) {
   validate(input, scheduleSchema, 'schedule');
-  if (input.frequency === 'manual') return { frequency: 'manual' };
   if (input.hour === undefined || input.utc_offset_minutes === undefined || input.utc_offset_minutes % 60 !== 0)
     throw new DigestError('A recurring schedule needs an hour and a UTC offset in whole hours.');
   const schedule = { frequency: input.frequency, hour: input.hour, utc_offset_minutes: input.utc_offset_minutes };

@@ -178,8 +178,8 @@
   $('frequency').onchange = scheduleFields;
   function editDigest(digest = null) {
     editorDigest = digest; createKey = crypto.randomUUID(); $('name').value = digest?.name ?? ''; $('prompt').value = digest?.prompt ?? ''; $('domains').value = digest?.domains.join('\n') ?? '';
-    const schedule = digest?.schedule ?? { frequency: 'manual' };
-    $('item-count').value = digest?.items_per_edition ?? 12; $('frequency').value = schedule.frequency === 'manual' ? 'daily' : schedule.frequency;
+    const schedule = digest?.schedule ?? { frequency: 'daily' };
+    $('item-count').value = digest?.items_per_edition ?? 12; $('frequency').value = schedule.frequency;
     $('hour').value = schedule.hour ?? 9; $('weekday').value = schedule.weekday ?? 1; $('monthday').value = schedule.month_day ?? 1;
     const localOffset = -new Date().getTimezoneOffset() / 60;
     $('utc-offset').value = schedule.utc_offset_minutes === undefined ? (Number.isInteger(localOffset) && localOffset >= -12 && localOffset <= 14 ? localOffset : 0) : schedule.utc_offset_minutes / 60;
@@ -191,7 +191,7 @@
     event.preventDefault(); $('save-digest').disabled = true; $('form-error').textContent = '';
     const fields = { name: $('name').value, prompt: $('prompt').value, domains: $('domains').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean),
       items_per_edition: Number($('item-count').value), schedule: formSchedule() };
-    const oldSchedule = editorDigest?.schedule ?? { frequency: 'manual' };
+    const oldSchedule = editorDigest?.schedule ?? null;
     const scheduleChanged = JSON.stringify(oldSchedule) !== JSON.stringify(fields.schedule);
     try {
       const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
@@ -224,7 +224,7 @@
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.2.2' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.2.3' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digest through its connected plugin to load your library.', true); });
   else loadLibrary();
