@@ -1,9 +1,20 @@
 {
   "name": "codex-digests-plugin",
-  "plugins": [{
-    "name": "digest",
-    "source": { "source": "url", "url": "https://github.com/PaulRenvoise/codex-digests-plugin.git" },
-    "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
-    "category": "Productivity"
-  }]
+  "interface": {
+    "displayName": "Digests"
+  },
+  "plugins": [
+    {
+      "name": "digest",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
 }
