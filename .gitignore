@@ -8,4 +8,4 @@ dist/
 *.tar.gz
 .deployments/
 .openai/hosting.json
-!templates/backend/.openai/hosting.json
+!plugins/digests/templates/backend/.openai/hosting.json

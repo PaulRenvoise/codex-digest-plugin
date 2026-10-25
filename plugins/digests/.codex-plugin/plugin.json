@@ -1,0 +1,15 @@
+{
+  "name": "digests",
+  "version": "0.2.3",
+  "description": "Create a personal Digest backend on ChatGPT Sites, connect an existing deployment, and curate digests that learn from your votes.",
+  "author": {
+    "name": "Paul Renvoise"
+  },
+  "repository": "https://github.com/PaulRenvoise/codex-digests-plugin",
+  "skills": "./skills/",
+  "homepage": "https://github.com/PaulRenvoise/codex-digests-plugin",
+  "interface": {
+    "displayName": "Digests",
+    "websiteURL": "https://github.com/PaulRenvoise/codex-digests-plugin"
+  }
+}

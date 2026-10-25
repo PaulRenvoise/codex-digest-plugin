@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "digest",
+      "name": "digests",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugins/digests"
       },
       "policy": {
         "installation": "AVAILABLE",

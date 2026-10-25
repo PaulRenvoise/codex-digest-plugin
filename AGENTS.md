@@ -1,5 +1,7 @@
 # Development
 
+- Keep the installable plugin self-contained under `plugins/digests/`, following the Dressing and Obsidian repository layout. The root marketplace points to this directory; root package scripts are development entrypoints.
+
 - Keep the distributed template free of deployment IDs, private endpoints, credentials and user records. Personal deployments belong outside the tracked source.
 - Preserve the minimal UI: no bookmarks, comments, decorative headers or flavor text.
 - Run `npm test`, `npm run check` and `npm run build` after backend or template changes. Verify relevant UI interactions through a browser.

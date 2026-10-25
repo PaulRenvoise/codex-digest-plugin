@@ -3,11 +3,13 @@
   "version": "0.2.3",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "check": "node scripts/check-package.mjs",
-    "build": "node templates/backend/scripts/build.mjs",
-    "dev": "node scripts/dev.mjs"
+    "test": "node --test plugins/digests/tests/*.test.mjs",
+    "check": "node plugins/digests/scripts/check-package.mjs",
+    "build": "node plugins/digests/templates/backend/scripts/build.mjs",
+    "dev": "node plugins/digests/scripts/dev.mjs"
   }
 }

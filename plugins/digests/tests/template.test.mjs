@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -21,4 +21,18 @@ test('new deployments have no personal identity; upgrades preserve identity and 
   await writeFile(path.join(destination, 'src/worker.mjs'), '// user customization');
   assert.throws(() => execFileSync(process.execPath, [script, destination, '--upgrade'], { stdio: 'pipe' }), /Local modifications/);
   assert.equal(await readFile(path.join(destination, 'src/worker.mjs'), 'utf8'), '// user customization');
+});
+
+test('marketplace plugin works when installed without the repository root', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'digest-installed-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const pluginRoot = fileURLToPath(new URL('..', import.meta.url));
+  const installed = path.join(root, 'installed'), destination = path.join(root, 'backend');
+  await cp(pluginRoot, installed, { recursive: true, filter: source => !['dist', 'node_modules'].includes(path.basename(source)) });
+  execFileSync(process.execPath, [path.join(installed, 'scripts/check-package.mjs')], { cwd: root });
+  execFileSync(process.execPath, [path.join(installed, 'scripts/materialize-backend.mjs'), destination], { cwd: root });
+  execFileSync(process.execPath, [path.join(destination, 'scripts/build.mjs')], { cwd: destination });
+  const built = await readFile(path.join(destination, 'dist/server/index.js'), 'utf8');
+  assert.match(built, /export default createWorker/);
+  const hosting = JSON.parse(await readFile(path.join(destination, 'dist/.openai/hosting.json'), 'utf8'));
+  assert.equal(hosting.project_id, undefined); assert.equal(hosting.d1, 'DB');
 });

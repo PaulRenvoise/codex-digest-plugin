@@ -1,4 +1,4 @@
-# Digest
+# Digests
 
 A personal digest plugin for ChatGPT and Codex. Create digests with a **name**, **prompt**, **non-exhaustive preferred domains**, **items per edition**, and **frequency**. Read editions and upvote or downvote links to guide future selections.
 
@@ -6,7 +6,7 @@ Each user deploys a private backend to their own ChatGPT Site. Digests, articles
 
 ## Setup
 
-1. Install this repository as a Codex plugin using its marketplace, or add the repository through your supported plugin installation UI. The marketplace is `.agents/plugins/marketplace.json`; the companion plugin manifest is `.codex-plugin/plugin.json`.
+1. Install this repository as a Codex plugin using its marketplace, or add the repository through your supported plugin installation UI. The marketplace is `.agents/plugins/marketplace.json`; the companion plugin manifest is `plugins/digests/.codex-plugin/plugin.json`.
 2. Ask **“Use setup-digest to create my Digest backend on Sites.”** Sites must be available in the setup session. Alternatively, identify an existing Digest Site to connect.
 3. Setup deploys the bundled backend template to a private Site and connects the runtime plugin that Sites creates. Complete the native installation/sign-in flow if prompted.
 4. Open the deployed Digest plugin, choose **New digest**, and supply a prompt and preferred domains. **Find more** asks ChatGPT to research and save a new edition.
@@ -64,7 +64,7 @@ Tests exercise real SQLite constraints through a D1-compatible adapter, includin
 ## Deployment template
 
 ```sh
-node scripts/materialize-backend.mjs /absolute/new/digest-backend
+node plugins/digests/scripts/materialize-backend.mjs /absolute/new/digest-backend
 ```
 
 This copies the template without registering or publishing a Site. Use the Sites workflow to register the generated project, persist its returned project ID, synchronize source, run `node scripts/build.mjs`, package and publish privately. The generated hosting manifest declares `DB` and `mcp`; the published source's project ID stays in that deployment's repository.
@@ -72,21 +72,23 @@ This copies the template without registering or publishing a Site. Use the Sites
 For an existing managed deployment:
 
 ```sh
-node scripts/materialize-backend.mjs /absolute/existing/digest-backend --upgrade
+node plugins/digests/scripts/materialize-backend.mjs /absolute/existing/digest-backend --upgrade
 ```
 
-Use the `upgrade-digest` skill for the complete source-checkout and publication workflow. The helper alone does not deploy. See [deployment details](references/deployment.md).
+Use the `upgrade-digest` skill for the complete source-checkout and publication workflow. The helper alone does not deploy. See [deployment details](plugins/digests/references/deployment.md).
 
 ## Layout
 
 ```text
-.codex-plugin/       Companion plugin manifest
-.agents/plugins/     GitHub marketplace entry
-skills/              Setup, generation, management and upgrade workflows
-templates/backend/   Portable server, UI, schema migrations and build script
-scripts/             Template materializer, package checks and local preview
-tests/               Behavioral integration tests
-references/          Hosting and connection contract
+.agents/plugins/marketplace.json  Repository marketplace
+plugins/digests/                  Self-contained installable plugin
+  .codex-plugin/plugin.json      Plugin manifest
+  skills/                        Setup, generation, management and upgrade workflows
+  scripts/                       Template materializer, checks and local preview
+  references/                    Hosting and connection contract
+  templates/backend/             Portable server, UI, migrations and build script
+  tests/                         Behavioral integration tests
+package.json                     Repository development commands
 ```
 
 No GitHub-hosted install hook silently creates hosting or sends users to the author's Site. Users explicitly create their own backend or connect an existing one they can access.
