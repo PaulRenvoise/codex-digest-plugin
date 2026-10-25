@@ -19,7 +19,7 @@ The GitHub companion supplies setup, upgrade and research skills. The deployed S
 - Minimal responsive library: configuration, edition selector, article titles/summaries, upvote and downvote. Click a selected vote again to clear it.
 - MCP App resource with global/sidebar and thread/panel entrypoints.
 - Native plugin setting for the default digest. Edit each digest's prompt and domains in the panel.
-- Preferred-domain normalization, canonical URL deduplication and explicit meaningful-update handling.
+- Preferred-domain normalization, strict canonical URL deduplication across all editions of each digest, including concurrent saves.
 - Feedback and history pagination for research. Explicit prompts take priority over inferred preferences.
 - Authenticated ownership checks, atomic edition writes and revision checks for concurrent edits/votes.
 - Versioned setup template and an upgrade helper that preserves deployment identity and rejects unmerged customizations or rewritten migration history.
@@ -39,6 +39,8 @@ The desktop integration was verified in the desktop MCP App panel: the hosted li
 ## Per-digest settings
 
 Choose 1–30 items per edition (default 12). Generation uses this target and returns fewer when there are not enough useful links.
+
+The prompt describes what to find; linked cards, summaries, source metadata and voting controls are built in. Previously shown canonical URLs are rejected even with an update note. Tracking parameters and URL fragments are ignored for duplicate checks. Research history includes titles and summaries to help avoid the same story at different URLs; semantic duplicates still depend on research judgment. The same link may appear in different digests.
 
 The form offers daily, weekly, and monthly frequency as one sentence, with the relevant day, hour, and UTC offset. New digests default to daily. UTC offsets are fixed whole hours from UTC−12 to UTC+14; they do not follow daylight saving. Monthly dates use the last day in shorter months.
 

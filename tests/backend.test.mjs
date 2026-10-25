@@ -44,14 +44,17 @@ test('stale digest edits cannot overwrite another device', async t => {
   const updated = await service.call('update_digest', args); assert.equal(updated.digest.revision, 2);
   await assert.rejects(() => service.call('update_digest', { ...args, name: 'Stale name' }), /another device/);
 });
-test('edition retry is idempotent; tracked URL duplicates require meaningful update', async t => {
+test('edition retries are idempotent and previously shown links cannot bypass uniqueness', async t => {
   const { service, digest, makeEdition } = await fixture(t);
   const first = await makeEdition(), retry = await makeEdition();
   assert.equal(first.edition.id, retry.edition.id);
   assert.equal((await service.call('list_editions', { digest_id: digest.id })).editions.length, 1);
   await assert.rejects(() => makeEdition('second'), /already shown/);
-  const updated = await makeEdition('third', [{ title: 'Updated', url: 'https://example.org/rendering', summary: 'A new measured technique.', kind: 'article', update_note: 'New benchmark section.' }]);
-  assert.equal(updated.items[0].item_id, first.items[0].item_id);
+  await assert.rejects(() => makeEdition('third', [{ title: 'Updated', url: 'https://example.org/rendering/?utm_medium=email#new', summary: 'A new measured technique.', kind: 'article', update_note: 'New benchmark section.' }]), /already shown/);
+  assert.equal((await service.call('list_editions', { digest_id: digest.id })).editions.length, 1);
+  const context = await service.call('get_research_context', { digest_id: digest.id });
+  assert.equal(context.history[0].title, 'Rendering notes');
+  assert.equal(context.history[0].summary, 'A rendering breakdown.');
   assert.equal((await service.call('get_edition', { digest_id: digest.id, edition_id: first.edition.id })).items[0].title, 'Rendering notes');
 });
 test('invalid editions leave no partial records', async t => {
@@ -150,4 +153,13 @@ test('tool arguments reject unknown fields and unsafe data', async t => {
   await assert.rejects(() => makeEdition('bad-url', [{ title: 'Bad', url: 'data:text/html,evil', summary: 'Bad', kind: 'article' }]), /HTTP/);
   await assert.rejects(() => makeEdition('bad-date', [{ title: 'Bad', url: 'https://example.org', summary: 'Bad', kind: 'article', published_at: '2026-02-31' }]), /dates/);
   await assert.rejects(() => makeEdition('invalid-month', [{ title: 'Bad', url: 'https://example.org', summary: 'Bad', kind: 'article', published_at: '2026-99-31' }]), /dates/);
+});
+
+test('concurrent generations cannot publish the same link twice', async t => {
+  const { service, digest, makeEdition } = await fixture(t);
+  const results = await Promise.allSettled([makeEdition('concurrent-a'), makeEdition('concurrent-b')]);
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(r => r.status === 'rejected').length, 1);
+  assert.equal((await service.call('list_editions', { digest_id: digest.id })).editions.length, 1);
+  assert.equal((await service.call('get_research_context', { digest_id: digest.id })).history.length, 1);
 });
