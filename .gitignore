@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+.env*
+!.env.example
+.wrangler/
+*.sqlite*
+*.tar.gz
+.deployments/
+.openai/hosting.json
+!templates/backend/.openai/hosting.json

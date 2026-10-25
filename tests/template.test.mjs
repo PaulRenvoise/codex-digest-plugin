@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const script = fileURLToPath(new URL('../scripts/materialize-backend.mjs', import.meta.url));
+test('new deployments have no personal identity; upgrades preserve identity and data', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'digest-template-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const destination = path.join(root, 'backend');
+  execFileSync(process.execPath, [script, destination]);
+  const manifestPath = path.join(destination, '.openai/hosting.json');
+  let manifest = JSON.parse(await readFile(manifestPath)); assert.equal(manifest.project_id, undefined); assert.equal(manifest.d1, 'DB');
+  assert.throws(() => execFileSync(process.execPath, [script, destination], { stdio: 'pipe' }), /Destination already exists/);
+  manifest.project_id = 'test-site-identity'; await writeFile(manifestPath, JSON.stringify(manifest));
+  await writeFile(path.join(destination, 'private.sqlite'), 'do not touch');
+  execFileSync(process.execPath, [script, destination, '--upgrade']);
+  assert.equal(JSON.parse(await readFile(manifestPath)).project_id, 'test-site-identity');
+  assert.equal(await readFile(path.join(destination, 'private.sqlite'), 'utf8'), 'do not touch');
+  await writeFile(path.join(destination, 'src/worker.mjs'), '// user customization');
+  assert.throws(() => execFileSync(process.execPath, [script, destination, '--upgrade'], { stdio: 'pipe' }), /Local modifications/);
+  assert.equal(await readFile(path.join(destination, 'src/worker.mjs'), 'utf8'), '// user customization');
+});

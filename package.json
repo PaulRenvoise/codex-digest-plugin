@@ -1,0 +1,13 @@
+{
+  "name": "codex-digest-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check-package.mjs",
+    "build": "node templates/backend/scripts/build.mjs",
+    "dev": "node scripts/dev.mjs"
+  }
+}

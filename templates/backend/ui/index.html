@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digest</title>
+<style>
+:root{color-scheme:light dark;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee;font:14px/1.5 system-ui,-apple-system,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}}
+:root[data-theme="light"]{color-scheme:light;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:850px;margin:auto;padding:16px}button,input,select,textarea{font:inherit;color:inherit}button{padding:8px 12px;min-height:40px;background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer}button:hover{background:var(--soft)}button:disabled{opacity:.5;cursor:wait}button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}.primary{background:var(--ink);color:var(--bg)}input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;max-width:100%;font:inherit}textarea{width:100%;resize:vertical}.toolbar,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar select,.controls select{flex:1;min-width:120px}#status{font-size:12px;color:var(--muted);margin:8px 0}#status:empty{display:none}#status.error,#form-error{color:#c44}.card{padding:18px 0;border-bottom:1px solid var(--line)}.meta{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;color:var(--muted)}.card h2{font-size:17px;line-height:1.4;margin:8px 0;font-weight:600}.card a{color:inherit;text-decoration:none}.card a:hover{text-decoration:underline}.summary{margin:8px 0 12px}.tags{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:11px;margin-bottom:10px}.tag{padding:2px 6px;background:var(--soft);border-radius:4px}.actions{margin:0}.actions button{min-width:42px;font-size:17px}.update,.help{font-size:12px;color:var(--muted)}.empty{padding:25px 0;color:var(--muted)}dialog{width:min(540px,calc(100% - 24px));max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px}dialog::backdrop{background:#0005}dialog h2{font-size:18px;margin:0 0 15px}form label{display:block;margin:14px 0 5px;font-weight:600}form input{width:100%}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}[hidden]{display:none!important}@media(max-width:440px){main{padding:12px}.toolbar{gap:6px}.toolbar button{padding:8px}}
+</style></head><body><main>
+  <div class="toolbar"><button id="new" class="quiet">+ New digest</button></div>
+  <div id="library" hidden>
+    <div class="toolbar"><select id="digest-select" aria-label="Select digest"></select><button id="edit">Settings</button><button id="generate" class="primary">Find more</button></div>
+    <div class="controls"><button id="refresh" class="quiet">Refresh</button></div>
+    <div class="controls" id="edition-controls"><select id="edition-select" aria-label="Select edition"></select><button id="older" hidden>Older editions</button></div>
+  </div>
+  <p id="status" role="status" aria-live="polite">Connecting to your library…</p>
+  <div id="cards" class="cards"></div>
+  <div id="request-fallback" class="card" hidden><p>Paste this request into your ChatGPT conversation:</p><textarea id="request-text" aria-label="Prepared conversation request" rows="5" readonly></textarea><button id="copy-request">Copy request</button></div>
+</main>
+<dialog id="editor"><form id="digest-form"><h2 id="editor-title">New digest</h2>
+  <label for="name">Name</label><input id="name" maxlength="100" required placeholder="Game Dev, Art, World News…">
+  <label for="prompt">Prompt</label><textarea id="prompt" rows="7" maxlength="16000" required placeholder="What should this digest look for? Describe your interests, what to avoid, and how to present each selection."></textarea>
+  <label for="domains">Preferred domains</label><textarea id="domains" rows="4" placeholder="unity.com&#10;80.lv&#10;github.com"></textarea><p class="help">One domain per line. Full URLs are accepted. Research can explore other sources too.</p>
+  <p id="form-error" role="alert"></p><div class="form-actions"><button id="cancel" type="button">Cancel</button><button id="save-digest" class="primary" type="submit">Create digest</button></div>
+</form></dialog>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let bridgeReady = false, rpcId = 0, digests = [], selectedId = null, editions = [], nextEditionOffset = null;
+  let editorDigest = null, createKey = null, refreshSequence = 0;
+  const pending = new Map(), embedded = window.parent !== window;
+  function post(message) { window.parent.postMessage({ jsonrpc: '2.0', ...message }, '*'); }
+  function rpc(method, params, timeout = 20000) {
+    return new Promise((resolve, reject) => {
+      const id = ++rpcId, timer = setTimeout(() => { pending.delete(id); reject(new Error('The app did not confirm the request. Refresh to check its state.')); }, timeout);
+      pending.set(id, { resolve, reject, timer }); post({ id, method, params });
+    });
+  }
+  function status(text = '', error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
+  function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
+  async function call(name, args = {}) {
+    let result;
+    if (bridgeReady) result = await rpc('tools/call', { name, arguments: args });
+    else if (embedded && window.openai?.callTool) result = await window.openai.callTool(name, args);
+    else if (!embedded) {
+      const response = await fetch('/api/call', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, arguments: args }) });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error || 'Request failed.'); return body;
+    } else throw new Error('The plugin connection is unavailable. Reopen Digest from your connected plugin.');
+    if (result?.isError) throw new Error(result.content?.find(c => c.type === 'text')?.text || 'Request failed.');
+    return result?.structuredContent ?? JSON.parse(result.content.find(c => c.type === 'text').text);
+  }
+  function option(select, value, label) { const el = node('option', label); el.value = value; select.append(el); }
+  function selected() { return digests.find(d => d.id === selectedId); }
+  function renderHeader() {
+    $('library').hidden = !digests.length; $('digest-select').replaceChildren();
+    for (const digest of digests) option($('digest-select'), digest.id, digest.name);
+    $('digest-select').value = selectedId || '';
+
+  }
+  function empty(title, text, action) {
+    const box = node('section', undefined, 'empty'); box.append(node('p', text));
+    if (action) { const button = node('button', action.label, 'primary'); button.onclick = action.run; box.append(button); }
+    $('cards').replaceChildren(box);
+  }
+  async function loadLibrary(preferred) {
+    const sequence = ++refreshSequence;
+    try {
+      status('Loading your digests…');
+      const data = await call('open_digest', preferred ? { digest_id: preferred } : {});
+      if (sequence !== refreshSequence) return;
+      digests = data.digests; selectedId = data.selected_digest_id;
+      renderHeader();
+      if (!digests.length) { empty('', 'No digests yet.'); status(''); return; }
+      await loadView(sequence);
+    } catch (error) { status(error.message, true); }
+  }
+  async function loadView(sequence = ++refreshSequence) {
+    const digestId = selectedId; $('cards').replaceChildren();
+    try {
+      status('Loading…'); renderHeader();
+        const priorEdition = $('edition-select').value;
+        const data = await call('list_editions', { digest_id: digestId });
+        if (sequence !== refreshSequence) return;
+        editions = data.editions; nextEditionOffset = data.next_offset; renderEditions();
+        if (editions.some(e => e.id === priorEdition)) $('edition-select').value = priorEdition;
+        if (editions.length) await loadEdition(sequence);
+        else empty('', 'No editions yet. Use Find more to generate one.');
+      if (sequence === refreshSequence) status('');
+    } catch (error) { if (sequence === refreshSequence) status(error.message, true); }
+  }
+  function renderEditions() {
+    const previous = $('edition-select').value; $('edition-select').replaceChildren();
+    for (const e of editions) option($('edition-select'), e.id, `${e.title} · ${e.item_count} items`);
+    if (editions.some(e => e.id === previous)) $('edition-select').value = previous;
+    $('older').hidden = nextEditionOffset === null;
+  }
+  async function loadEdition(sequence = ++refreshSequence) {
+    try {
+      const data = await call('get_edition', { digest_id: selectedId, edition_id: $('edition-select').value });
+      if (sequence !== refreshSequence) return; renderItems(data.items); status('');
+    } catch (error) { if (sequence === refreshSequence) status(error.message, true); }
+  }
+  function renderItems(items, append = false) {
+    if (!append) $('cards').replaceChildren();
+    if (!items.length && !append) { empty('', 'No articles in this edition.'); return; }
+    const digestId = selectedId;
+    for (const item of items) $('cards').append(card(item, digestId));
+  }
+  function card(item, digestId) {
+    const article = node('article', undefined, 'card'), meta = node('div', undefined, 'meta');
+    let linkUrl; try { linkUrl = new URL(item.url); } catch { return node('p', 'Invalid item URL.'); }
+    if (!['http:', 'https:'].includes(linkUrl.protocol)) return node('p', 'Unsupported item URL.');
+    meta.append(node('span', linkUrl.hostname.replace(/^www\./, '')), node('span', '·'), node('span', item.kind));
+    if (item.published_at) meta.append(node('span', '·'), node('span', item.published_at));
+    const heading = node('h2'), link = node('a', item.title); link.href = linkUrl.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; heading.append(link);
+    article.append(meta, heading, node('p', item.summary, 'summary'));
+    if (item.update_note) article.append(node('p', `Updated: ${item.update_note}`, 'update'));
+    const tags = node('div', undefined, 'tags'); for (const tag of item.tags) tags.append(node('span', tag, 'tag')); article.append(tags);
+    const actions = node('div', undefined, 'actions'), up = node('button', '↑'), down = node('button', '↓');
+    up.setAttribute('aria-label', 'Upvote'); down.setAttribute('aria-label', 'Downvote');
+    up.title = 'Upvote'; down.title = 'Downvote';
+    function paint() { up.setAttribute('aria-pressed', String(item.vote === 1)); down.setAttribute('aria-pressed', String(item.vote === -1)); }
+    let busy = false;
+    async function feedback(vote) {
+      if (busy) return; busy = true; [up, down].forEach(b => b.disabled = true);
+      try {
+        const data = await call('save_feedback', { digest_id: digestId, item_id: item.item_id, expected_revision: item.feedback_revision, vote });
+        Object.assign(item, data.feedback, { feedback_revision: data.feedback.revision }); paint(); status('Vote saved.');
+      } catch (error) { status(error.message, true); }
+      finally { busy = false; [up, down].forEach(b => b.disabled = false); }
+    }
+    up.onclick = () => feedback(item.vote === 1 ? 0 : 1);
+    down.onclick = () => feedback(item.vote === -1 ? 0 : -1);
+    paint(); actions.append(up, down); article.append(actions); return article;
+  }
+
+  async function sendPrompt(prompt) {
+    $('request-text').value = prompt; $('request-fallback').hidden = true;
+    try {
+      if (bridgeReady) { const result = await rpc('ui/message', { role: 'user', content: [{ type: 'text', text: prompt }] }); if (result?.isError) throw new Error(); }
+      else if (window.openai?.sendFollowUpMessage) await window.openai.sendFollowUpMessage({ prompt });
+      else { $('request-fallback').hidden = false; status('Your request is ready to copy into ChatGPT.'); return; }
+      status('Request sent. Refresh when the new edition is ready.');
+    } catch { $('request-fallback').hidden = false; status('Sending was not confirmed. Check the conversation before pasting the request.', true); }
+  }
+  function generate() {
+    if (!selectedId) return;
+    sendPrompt(`Generate a new edition for my Digest named ${JSON.stringify(selected().name)} (digest_id: ${selectedId}). Read get_research_context and all pages of prior links and feedback first. Search and verify sources, follow the saved prompt, and explore beyond preferred domains. Save the selection with save_edition and show it with open_digest.`);
+  }
+  function editDigest(digest = null) {
+    editorDigest = digest; createKey = crypto.randomUUID(); $('name').value = digest?.name ?? ''; $('prompt').value = digest?.prompt ?? ''; $('domains').value = digest?.domains.join('\n') ?? '';
+    $('editor-title').textContent = digest ? 'Digest settings' : 'New digest'; $('save-digest').textContent = digest ? 'Save changes' : 'Create digest'; $('form-error').textContent = ''; $('editor').showModal();
+  }
+  $('new').onclick = () => editDigest(); $('edit').onclick = () => editDigest(selected()); $('cancel').onclick = () => $('editor').close();
+  $('digest-form').onsubmit = async event => {
+    event.preventDefault(); $('save-digest').disabled = true; $('form-error').textContent = '';
+    const fields = { name: $('name').value, prompt: $('prompt').value, domains: $('domains').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) };
+    try {
+      const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
+      $('editor').close(); await loadLibrary(data.digest.id);
+    } catch (error) { $('form-error').textContent = error.message; }
+    finally { $('save-digest').disabled = false; }
+  };
+  $('digest-select').onchange = () => { selectedId = $('digest-select').value; $('request-fallback').hidden = true; loadView(); };
+  $('edition-select').onchange = () => loadEdition(); $('generate').onclick = generate;
+  $('refresh').onclick = () => loadLibrary(selectedId);
+  $('older').onclick = async () => {
+    const sequence = refreshSequence; $('older').disabled = true;
+    try { const data = await call('list_editions', { digest_id: selectedId, offset: nextEditionOffset }); if (sequence !== refreshSequence) return;
+      editions.push(...data.editions); nextEditionOffset = data.next_offset; renderEditions();
+    } catch (error) { status(error.message, true); } finally { $('older').disabled = false; }
+  };
+  $('copy-request').onclick = async () => { try { await navigator.clipboard.writeText($('request-text').value); status('Request copied.'); } catch { $('request-text').select(); status('Select and copy the prepared request.'); } };
+  window.addEventListener('message', event => {
+    if (event.source !== window.parent || !event.data || event.data.jsonrpc !== '2.0') return;
+    const m = event.data;
+    if (pending.has(m.id)) { const p = pending.get(m.id); clearTimeout(p.timer); pending.delete(m.id); if (m.error) p.reject(new Error(m.error.message)); else p.resolve(m.result); }
+    if (m.method === 'ui/notifications/tool-result' && m.params?.structuredContent?.selected_digest_id) loadLibrary(m.params.structuredContent.selected_digest_id);
+    if (m.method === 'ui/notifications/host-context-changed' && m.params?.theme) document.documentElement.dataset.theme = m.params.theme;
+    if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.1.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+    .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(); })
+    .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digest through its connected plugin to load your library.', true); });
+  else loadLibrary();
+})();
+</script></body></html>
