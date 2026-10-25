@@ -32,7 +32,7 @@
   <p id="schedule-help" class="help" hidden></p>
   <label for="item-count">Items per edition</label><input id="item-count" type="number" min="1" max="30" step="1" value="12" required><span class="help"> 1–30; fewer if there aren’t enough good links.</span>
   <label for="prompt">Prompt</label><textarea id="prompt" rows="5" maxlength="16000" required placeholder="What should this digest look for? Describe topics, interests, and what to avoid."></textarea>
-  <label for="domains">Preferred domains</label><textarea id="domains" rows="3" placeholder="unity.com&#10;80.lv&#10;github.com"></textarea><p class="help">One domain per line. Other sources can be included.</p>
+  <label for="domains">Preferred sources</label><textarea id="domains" rows="3" placeholder="unity.com&#10;github.com/keijiro&#10;reddit.com/r/Unity3D"></textarea><p class="help">One domain or URL per line. Other sources can be included.</p>
   <p id="form-error" role="alert"></p><div class="form-actions"><button id="cancel" type="button">Cancel</button><button id="save-digest" class="primary" type="submit">Create digest</button></div>
 </form></dialog>
 <script>
@@ -124,7 +124,10 @@
     let linkUrl; try { linkUrl = new URL(item.url); } catch { return node('p', 'Invalid item URL.'); }
     if (!['http:', 'https:'].includes(linkUrl.protocol)) return node('p', 'Unsupported item URL.');
     meta.append(node('span', linkUrl.hostname.replace(/^www\./, '')), node('span', '·'), node('span', item.kind));
-    if (item.published_at) meta.append(node('span', '·'), node('span', item.published_at));
+    if (item.published_at) {
+      const label = { published: 'Published', created: 'Created', released: 'Released', updated: 'Updated' }[item.date_kind];
+      meta.append(node('span', '·'), node('span', label ? `${label} ${item.published_at}` : item.published_at));
+    }
     const heading = node('h2'), link = node('a', item.title); link.href = linkUrl.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; heading.append(link);
     article.append(meta, heading, node('p', item.summary, 'summary'));
     if (item.update_note) article.append(node('p', `Updated: ${item.update_note}`, 'update'));
@@ -158,7 +161,7 @@
   }
   function generate() {
     if (!selectedId) return;
-    sendPrompt(`Generate a new edition for my digest named ${JSON.stringify(selected().name)} (digest_id: ${selectedId}). Read get_research_context and all pages of prior links and feedback first. Aim for the saved items_per_edition, returning fewer if quality warrants it. Search and verify sources, follow the saved prompt, and explore beyond preferred domains. Save the selection with save_edition and show it with open_digest.`);
+    sendPrompt(`Generate a new edition for my digest named ${JSON.stringify(selected().name)} (digest_id: ${selectedId}). Read get_research_context and all pages of prior links and feedback first. Aim for the saved items_per_edition, returning fewer if quality warrants it. Search and verify sources, follow the saved prompt, and explore beyond preferred sources. Save the selection with save_edition and show it with open_digest.`);
   }
   for (let hour = 0; hour < 24; hour++) option($('hour'), String(hour), `${String(hour).padStart(2, '0')}:00`);
   for (let offset = -12; offset <= 14; offset++) option($('utc-offset'), String(offset), `${offset >= 0 ? '+' : '−'}${Math.abs(offset)}`);
@@ -189,7 +192,7 @@
   $('new').onclick = () => editDigest(); $('edit').onclick = () => editDigest(selected()); $('cancel').onclick = () => $('editor').close();
   $('digest-form').onsubmit = async event => {
     event.preventDefault(); $('save-digest').disabled = true; $('form-error').textContent = '';
-    const fields = { name: $('name').value, prompt: $('prompt').value, domains: $('domains').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean),
+    const fields = { name: $('name').value, prompt: $('prompt').value, domains: $('domains').value.split(/\n+/).map(s => s.trim()).filter(Boolean),
       items_per_edition: Number($('item-count').value), schedule: formSchedule() };
     const oldSchedule = editorDigest?.schedule ?? null;
     const scheduleChanged = JSON.stringify(oldSchedule) !== JSON.stringify(fields.schedule);
@@ -224,7 +227,7 @@
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.2.5' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

@@ -19,11 +19,13 @@ Hosting is created only when requested. Each user creates their own backend or c
 | --- | --- |
 | Name | Identifies an independent digest. |
 | Prompt | Topics, interests, depth, freshness, and exclusions. Card presentation is built in. Explicit preferences take priority over inferred taste. |
-| Preferred domains | Normalized starting points, not an exhaustive source list. |
+| Preferred sources | Domains or URLs, including authors, communities and pages. Paths are preserved; search extends beyond this list. |
 | Items per edition | 1–30; default 12. Fewer when there aren’t enough useful links. |
 | Frequency | Daily, weekly, or monthly, with day, hour, and fixed UTC offset. |
 
 Edit settings in the panel; choose the default digest in native plugin settings. Each edition shows linked titles, summaries, and source details. Upvote or downvote a link; click the selected vote again to clear it. No bookmarks or comments.
+
+**Shared research rules:** verify reachable original links, use targeted creators and communities, label verified dates accurately, and default to at most two items per editorial source with sources interleaved. Aggregators and social posts lead to original material unless they contain the substance themselves.
 
 **No repeat links within a digest.** Canonical URL checks ignore common tracking parameters and fragments, reject repeats even with an update note, and protect concurrent saves. History includes titles and summaries to help catch the same story at different URLs; that comparison still relies on research judgment. Different digests may include the same link.
 

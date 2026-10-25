@@ -15,7 +15,7 @@ async function fixture(t) {
   return { db, service, other, digest, makeEdition };
 }
 test('normalizes domains and tracking without stripping meaningful URL parameters', () => {
-  assert.deepEqual(normalizeDomains(['www.unity.com', 'https://unity.com/blog', '80.lv']), ['unity.com', '80.lv']);
+  assert.deepEqual(normalizeDomains(['www.unity.com', 'https://unity.com/blog', '80.lv']), ['unity.com', 'https://unity.com/blog', '80.lv']);
   assert.equal(canonicalUrl('https://EXAMPLE.org/path/?b=2&utm_source=x&a=1#part'), 'https://example.org/path?a=1&b=2');
   assert.throws(() => canonicalUrl('javascript:alert(1)'), /HTTP/);
   assert.throws(() => normalizeDomains(['https://user:password@example.org']), /credentials/);
@@ -162,4 +162,28 @@ test('concurrent generations cannot publish the same link twice', async t => {
   assert.equal(results.filter(r => r.status === 'rejected').length, 1);
   assert.equal((await service.call('list_editions', { digest_id: digest.id })).editions.length, 1);
   assert.equal((await service.call('get_research_context', { digest_id: digest.id })).history.length, 1);
+});
+
+test('preferred sources preserve creators, communities, pages and meaningful queries', async t => {
+  const { service, digest } = await fixture(t);
+  const sources = ['www.unity.com', 'https://unity.com/', 'github.com/keijiro/', 'https://github.com/keijiro?utm_source=mail', 'reddit.com/r/Unity3D', 'https://example.org/search?q=rendering,shaders#results'];
+  const expected = ['unity.com', 'https://github.com/keijiro', 'https://reddit.com/r/Unity3D', 'https://example.org/search?q=rendering%2Cshaders'];
+  const updated = await service.call('update_digest', { digest_id: digest.id, expected_revision: 1, name: digest.name, prompt: digest.prompt, domains: sources });
+  assert.deepEqual(updated.digest.domains, expected);
+  assert.deepEqual((await service.call('get_research_context', { digest_id: digest.id })).digest.domains, expected);
+  assert.deepEqual((await service.call('list_digests')).digests[0].domains, expected);
+  for (const source of ['javascript:alert(1)', 'https://user:secret@example.org/path', 'https://example.org:8443/path']) assert.throws(() => normalizeDomains([source]));
+});
+test('edition dates retain their meaning and repository dates require provenance', async t => {
+  const { service, digest, makeEdition } = await fixture(t);
+  const item = { title: 'Tool', url: 'https://github.com/example/tool', summary: 'Useful tool.', kind: 'repository', published_at: '2026-10-01' };
+  for (const date_kind of [undefined, 'published', 'guessed']) await assert.rejects(() => makeEdition('bad-kind', [{ ...item, date_kind }]));
+  await assert.rejects(() => makeEdition('missing-date', [{ ...item, published_at: '', date_kind: 'created' }]));
+  for (const date_kind of ['created', 'released', 'updated']) {
+    const saved = await makeEdition(date_kind, [{ ...item, url: `${item.url}-${date_kind}`, date_kind }]);
+    const reopened = await service.call('get_edition', { digest_id: digest.id, edition_id: saved.edition.id });
+    assert.equal(reopened.items[0].date_kind, date_kind); assert.equal(reopened.items[0].published_at, item.published_at);
+  }
+  const unknown = await makeEdition('unknown-date', [{ title: 'Article', url: 'https://example.org/unknown-date', summary: 'Unknown date.', kind: 'article' }]);
+  assert.equal(unknown.items[0].date_kind, ''); assert.equal(unknown.items[0].published_at, null);
 });

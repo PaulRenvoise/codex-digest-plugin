@@ -1,13 +1,13 @@
 ---
 name: manage-digest
-description: Create or edit digest settings and cloud schedules, open editions, and inspect existing feedback through a connected Digestss backend.
+description: Create or edit digest settings and cloud schedules, open editions, and inspect existing feedback through a connected Digests backend.
 ---
 
 # Manage digests
 
 Use the connected backend and its `backend_info`, `list_digests`, `get_digest` and `open_digest` tools. If the backend is missing, use setup-digest. Preserve the chosen backend across calls.
 
-Each digest has a name, editorial prompt, non-exhaustive preferred domains, items_per_edition (1–30, default 12), and schedule. Express recency, depth, language and content types in the prompt. Accept domains or full source URLs; the server normalizes them. Older clients may omit count and schedule on edits; preserve existing values.
+Each digest has a name, editorial prompt, non-exhaustive preferred sources, items_per_edition (1–30, default 12), and schedule. Express recency, depth, language and content types in the prompt. Accept domains or full source URLs; preserve creator, community and page paths. The API field remains `domains` for compatibility. Older clients may omit count and schedule on edits; preserve existing values.
 
 For a new digest, infer a concise draft from the user's request and create it when authorized. Use a stable request key and reuse it on retries. Do not import another chat's contents unless requested. For edits, read the current record and pass its revision. On a conflict, reread and reconcile the user's intended change instead of overwriting another device's edit.
 

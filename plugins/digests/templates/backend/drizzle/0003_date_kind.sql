@@ -1,0 +1,1 @@
+ALTER TABLE entries ADD COLUMN date_kind TEXT NOT NULL DEFAULT '';
