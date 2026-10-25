@@ -117,11 +117,30 @@ test('HTTP authentication, CSRF rejection and MCP resource/tool discovery', asyn
   assert.equal((await send(rpc('tools/list'), { ...auth, origin: 'https://evil.example' })).status, 403);
   const discovered = await (await send(rpc('server/discover'), auth)).json();
   assert.ok(discovered.result.capabilities['openai/settings']);
+  for (const [method, params] of [
+    ['server/discover'], ['tools/list'], ['resources/list'], ['resources/templates/list'],
+    ['resources/read', { uri: UI_URI }], ['resources/read', { uri: 'ui://digest/library.html' }]
+  ]) {
+    const result = (await (await send(rpc(method, params), auth)).json()).result;
+    assert.equal(result.ttlMs, 0, `${method} must declare cache freshness for modern hosts`);
+    assert.equal(result.cacheScope, 'private');
+    if (method === 'resources/read') assert.equal(result.contents[0].uri, params.uri);
+  }
   const tools = (await (await send(rpc('tools/list'), auth)).json()).result.tools;
   assert.deepEqual(tools.find(t => t.name === 'save_feedback')._meta.ui.visibility, ['app']);
   assert.deepEqual(tools.find(t => t.name === 'open_digest')._meta['openai/ui'].entrypoints, [{ type: 'global' }, { type: 'thread' }]);
   const resource = (await (await send(rpc('resources/read', { uri: UI_URI }), auth)).json()).result.contents[0];
   assert.equal(resource.text, html); assert.equal(resource.mimeType, 'text/html;profile=mcp-app');
+  assert.deepEqual(resource._meta['openai/ui'].availableDisplayModes, ['fullscreen']);
+  const opened = (await (await send(rpc('tools/call', { name: 'open_digest' }), auth)).json()).result;
+  assert.equal(opened._meta.ui.resourceUri, resource.uri);
+  assert.equal(opened._meta['openai/outputTemplate'], resource.uri);
+  assert.equal(opened.structuredContent.digests.length, 1);
+  const listed = (await (await send(rpc('tools/call', { name: 'list_digests' }), auth)).json()).result;
+  assert.equal(listed._meta, undefined, 'Refreshing data must not launch another panel.');
+  for (const name of ['list_digests', 'settings_read', 'list_editions', 'get_edition', 'create_digest', 'update_digest']) {
+    assert.equal(tools.find(t => t.name === name)._meta['openai/widgetAccessible'], true);
+  }
   const unknown = await (await send(rpc('tools/call', { name: 'unknown' }), auth)).json(); assert.equal(unknown.result.isError, true);
   const valid = await (await send({ name: 'list_digests' }, auth, '/api/call')).json(); assert.equal(valid.digests.length, 1);
 });

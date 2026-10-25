@@ -67,9 +67,10 @@
     const sequence = ++refreshSequence;
     try {
       status('Loading your digests…');
-      const data = await call('open_digest', preferred ? { digest_id: preferred } : {});
+      const data = await call('list_digests');
+      const defaultId = preferred || selectedId || (await call('settings_read')).values.default_digest_id;
       if (sequence !== refreshSequence) return;
-      digests = data.digests; selectedId = data.selected_digest_id;
+      digests = data.digests; selectedId = digests.find(d => d.id === defaultId)?.id ?? digests[0]?.id ?? null;
       renderHeader();
       if (!digests.length) { empty('', 'No digests yet.'); status(''); return; }
       await loadView(sequence);
@@ -176,13 +177,17 @@
     if (event.source !== window.parent || !event.data || event.data.jsonrpc !== '2.0') return;
     const m = event.data;
     if (pending.has(m.id)) { const p = pending.get(m.id); clearTimeout(p.timer); pending.delete(m.id); if (m.error) p.reject(new Error(m.error.message)); else p.resolve(m.result); }
-    if (m.method === 'ui/notifications/tool-result' && m.params?.structuredContent?.selected_digest_id) loadLibrary(m.params.structuredContent.selected_digest_id);
+    if (m.method === 'ui/notifications/tool-result' && Array.isArray(m.params?.structuredContent?.digests) && Object.hasOwn(m.params.structuredContent, 'selected_digest_id')) {
+      const data = m.params.structuredContent;
+      ++refreshSequence; digests = data.digests; selectedId = data.selected_digest_id; renderHeader();
+      if (selectedId) loadView(); else { empty('', 'No digests yet.'); status(''); }
+    }
     if (m.method === 'ui/notifications/host-context-changed' && m.params?.theme) document.documentElement.dataset.theme = m.params.theme;
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.1.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
-    .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(); })
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.1.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+    .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digest through its connected plugin to load your library.', true); });
   else loadLibrary();
 })();

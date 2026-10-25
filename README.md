@@ -34,6 +34,8 @@ The browser UI and embedded MCP UI use the same database. A regular browser visi
 
 Native UI metadata is implemented, but availability of custom plugin UI, settings and mobile presentation depends on the host/account. Verify the generated Sites plugin on your intended clients. A passing backend test or responsive browser preview does not establish native mobile compatibility. The setup skill reports these separately.
 
+Version 0.1.1 was verified in the desktop MCP App panel: the hosted library loads and the New digest form opens. Automated tests cover votes and the embedded host message flow; mobile rendering and live panel vote persistence remain unverified. Open Digest through its plugin entry point for normal use; the standalone Site is an optional fallback.
+
 ## Local development
 
 Node.js **22.13+** is required (24+ recommended for the built-in SQLite test adapter). No npm install is needed.

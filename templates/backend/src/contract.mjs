@@ -1,5 +1,5 @@
-export const VERSION = '0.1.0';
-export const UI_URI = 'ui://digest/library.html';
+export const VERSION = '0.1.1';
+export const UI_URI = `ui://digest/library-${VERSION}.html`;
 export class DigestError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
@@ -50,6 +50,7 @@ export const TOOLS = Object.entries(schema).map(([name, inputSchema]) => ({
   name, title: name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
   outputSchema: { type: 'object', additionalProperties: true },
   annotations: { readOnlyHint: !writes.has(name), destructiveHint: false, openWorldHint: false, idempotentHint: true },
+  _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true },
   ...(name === 'open_digest' ? { _meta: {
     ui: { resourceUri: UI_URI }, 'openai/outputTemplate': UI_URI, 'openai/widgetAccessible': true,
     'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] }
