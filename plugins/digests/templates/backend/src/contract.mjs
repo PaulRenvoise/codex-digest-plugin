@@ -1,4 +1,4 @@
-export const VERSION = '0.2.4';
+export const VERSION = '0.2.5';
 export const UI_URI = `ui://digest/library-${VERSION}.html`;
 export class DigestError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -55,7 +55,7 @@ const descriptions = {
 };
 const writes = new Set(['create_digest', 'update_digest', 'save_edition', 'save_feedback', 'settings_update']);
 export const TOOLS = Object.entries(schema).map(([name, inputSchema]) => ({
-  name, title: name === 'open_digest' ? 'Open Digests' : name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
+  name, title: name === 'open_digest' ? 'Digests' : name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
   outputSchema: { type: 'object', additionalProperties: true },
   annotations: { readOnlyHint: !writes.has(name), destructiveHint: false, openWorldHint: false, idempotentHint: true },
   _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true },
