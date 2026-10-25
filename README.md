@@ -1,6 +1,6 @@
 # Digest
 
-A personal digest plugin for ChatGPT and Codex. Create digests with a **name**, **prompt**, and **non-exhaustive preferred domains**. Read editions and upvote or downvote links to guide future selections.
+A personal digest plugin for ChatGPT and Codex. Create digests with a **name**, **prompt**, **non-exhaustive preferred domains**, **items per edition**, and **frequency**. Read editions and upvote or downvote links to guide future selections.
 
 Each user deploys a private backend to their own ChatGPT Site. Digests, articles and votes live in that Site's database and can be used from supported desktop and mobile clients. This repository contains no shared service endpoint, personal Site identity or user data.
 
@@ -24,7 +24,7 @@ The GitHub companion supplies setup, upgrade and research skills. The deployed S
 - Authenticated ownership checks, atomic edition writes and revision checks for concurrent edits/votes.
 - Versioned setup template and an upgrade helper that preserves deployment identity and rejects unmerged customizations or rewritten migration history.
 
-No bookmarks, comments, autonomous crawler, model API subscription or background scheduler. Research uses the tools available in the invoking ChatGPT/Codex conversation. The backend stores verified selections and feedback; it does not itself browse the web. **Find more** saves another edition rather than altering an earlier one.
+No bookmarks, comments, autonomous crawler or model API subscription. Research uses the tools available in the invoking ChatGPT/Codex conversation. The backend stores verified selections and feedback; it does not itself browse the web. **Find more** saves another edition rather than altering an earlier one.
 
 ## Hosting and compatibility
 
@@ -34,7 +34,15 @@ The browser UI and embedded MCP UI use the same database. A regular browser visi
 
 Native UI metadata is implemented, but availability of custom plugin UI, settings and mobile presentation depends on the host/account. Verify the generated Sites plugin on your intended clients. A passing backend test or responsive browser preview does not establish native mobile compatibility. The setup skill reports these separately.
 
-Version 0.1.1 was verified in the desktop MCP App panel: the hosted library loads and the New digest form opens. Automated tests cover votes and the embedded host message flow; mobile rendering and live panel vote persistence remain unverified. Open Digest through its plugin entry point for normal use; the standalone Site is an optional fallback.
+The desktop integration was verified in the desktop MCP App panel: the hosted library loads and the New digest form opens. Automated tests cover votes and the embedded host message flow; mobile rendering and live panel vote persistence remain unverified. Open Digest through its plugin entry point for normal use; the standalone Site is an optional fallback.
+
+## Per-digest settings
+
+Choose 1–30 items per edition (default 12). Generation uses this target and returns fewer when there are not enough useful links.
+
+Frequency can be manual, daily at an hour, weekly on a weekday at an hour, or monthly on a date at an hour. UTC offsets are fixed whole hours from UTC−12 to UTC+14; they do not follow daylight saving. Monthly dates use the last day in shorter months.
+
+Saving a changed frequency sends a request to ChatGPT to apply a linked Sites cloud task. The standalone fallback provides a request to copy. The saved cadence is not an active-job indicator: ChatGPT must verify access, create or update the scheduler task, and confirm its actual status. No task is created just by installing the plugin. Scheduled runs reread the current item count and editorial settings; an old schedule must skip work after its cadence changes or is set to manual.
 
 ## Local development
 

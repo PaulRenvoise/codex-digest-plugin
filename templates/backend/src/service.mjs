@@ -1,4 +1,4 @@
-import { VERSION, DigestError, validateTool, normalizeDomains, canonicalUrl, safeUrl, stableId } from './contract.mjs';
+import { VERSION, DigestError, validateTool, normalizeDomains, normalizeSchedule, canonicalUrl, safeUrl, stableId } from './contract.mjs';
 
 export class DigestService {
   constructor(db, owner) { this.db = db; this.owner = owner; }
@@ -7,12 +7,12 @@ export class DigestService {
   async digest(id) {
     const row = await this.stmt('SELECT * FROM digests WHERE id = ? AND owner_id = ?', id, this.owner).first();
     if (!row) throw new DigestError('Digest not found.', 404);
-    const { owner_id, domains, ...data } = row;
-    return { ...data, domains: JSON.parse(domains) };
+    const { owner_id, domains, schedule, ...data } = row;
+    return { ...data, domains: JSON.parse(domains), schedule: JSON.parse(schedule) };
   }
   async listDigests() {
-    const rows = await this.rows('SELECT id, name, prompt, domains, revision, created_at, updated_at FROM digests WHERE owner_id = ? ORDER BY created_at DESC, id', this.owner);
-    return rows.map(row => ({ ...row, domains: JSON.parse(row.domains) }));
+    const rows = await this.rows('SELECT id, name, prompt, domains, items_per_edition, schedule, revision, created_at, updated_at FROM digests WHERE owner_id = ? ORDER BY created_at DESC, id', this.owner);
+    return rows.map(row => ({ ...row, domains: JSON.parse(row.domains), schedule: JSON.parse(row.schedule) }));
   }
   async edition(digestId, editionId) {
     await this.digest(digestId);
@@ -40,15 +40,17 @@ export class DigestService {
     if (name === 'create_digest') {
       const id = await stableId(this.owner, 'digest', args.request_key);
       const domains = normalizeDomains(args.domains);
-      await this.stmt(`INSERT INTO digests (id, owner_id, name, prompt, domains, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`, id, this.owner, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), now, now).run();
+      const schedule = normalizeSchedule(args.schedule);
+      await this.stmt(`INSERT INTO digests (id, owner_id, name, prompt, domains, items_per_edition, schedule, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`, id, this.owner, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? 12, JSON.stringify(schedule), now, now).run();
       return { digest: await this.digest(id) };
     }
     if (name === 'update_digest') {
-      await this.digest(args.digest_id);
+      const current = await this.digest(args.digest_id);
       const domains = normalizeDomains(args.domains);
-      const result = await this.stmt(`UPDATE digests SET name = ?, prompt = ?, domains = ?, revision = revision + 1, updated_at = ?
-        WHERE id = ? AND owner_id = ? AND revision = ? RETURNING id`, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), now,
+      const schedule = normalizeSchedule(args.schedule ?? current.schedule);
+      const result = await this.stmt(`UPDATE digests SET name = ?, prompt = ?, domains = ?, items_per_edition = ?, schedule = ?, revision = revision + 1, updated_at = ?
+        WHERE id = ? AND owner_id = ? AND revision = ? RETURNING id`, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? current.items_per_edition, JSON.stringify(schedule), now,
         args.digest_id, this.owner, args.expected_revision).first();
       if (!result) throw new DigestError('This digest changed on another device. Reload before saving your changes.', 409);
       return { digest: await this.digest(args.digest_id) };

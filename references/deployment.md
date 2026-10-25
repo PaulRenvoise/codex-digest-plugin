@@ -12,7 +12,7 @@
 - The library declares fullscreen display support. Refresh through data tools, not `open_digest`: tool-result notifications must not recursively launch or reload the panel.
 - The normal browser UI uses authenticated same-origin `/api/call`; embedded UI uses the MCP Apps bridge. Both access the same database. UI support varies by host and must be tested on the intended desktop/mobile surfaces.
 - Native plugin settings choose the default digest. No backend URL field is exposed: it would not alter ChatGPT's connection registration.
-- The backend does not call a model or web search API. Research happens in the invoking ChatGPT/Codex session; remote server instructions make the core workflow available without the GitHub companion skill. Scheduled/offline generation is not implemented.
+- The backend does not call a model or web search API. Research happens in the invoking ChatGPT/Codex session; remote server instructions make the core workflow available without the GitHub companion skill. Frequency settings persist desired timing; applying them is a separate Sites cloud-scheduler workflow. The panel requests that workflow through the host conversation and never claims that a saved cadence is an active job.
 
 ## Distribution boundary
 

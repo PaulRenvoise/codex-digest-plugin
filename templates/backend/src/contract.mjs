@@ -1,4 +1,4 @@
-export const VERSION = '0.1.1';
+export const VERSION = '0.2.0';
 export const UI_URI = `ui://digest/library-${VERSION}.html`;
 export class DigestError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -8,7 +8,15 @@ const id = str(100);
 const object = (properties, required = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
 const page = { type: 'integer', minimum: 0, maximum: 1000000 };
 const revision = { type: 'integer', minimum: 0, maximum: 2147483647 };
-const digestFields = { name: str(100), prompt: str(16000), domains: { type: 'array', items: str(2048), maxItems: 100 } };
+const scheduleSchema = object({
+  frequency: { type: 'string', enum: ['manual', 'daily', 'weekly', 'monthly'] },
+  hour: { type: 'integer', minimum: 0, maximum: 23 },
+  weekday: { type: 'integer', minimum: 0, maximum: 6, description: 'Weekly: 0 is Sunday, 1 is Monday.' },
+  month_day: { type: 'integer', minimum: 1, maximum: 31, description: 'Monthly date; shorter months use their last day.' },
+  utc_offset_minutes: { type: 'integer', minimum: -720, maximum: 840, description: 'Fixed UTC offset in minutes, in whole hours. UTC+2 is 120. No daylight saving.' }
+}, ['frequency']);
+const digestFields = { name: str(100), prompt: str(16000), domains: { type: 'array', items: str(2048), maxItems: 100 },
+  items_per_edition: { type: 'integer', minimum: 1, maximum: 30, description: 'Target count; default 12. Return fewer rather than pad a weak selection.' }, schedule: scheduleSchema };
 const itemFields = {
   title: str(400), url: str(4096), summary: str(3000),
   kind: { type: 'string', enum: ['article', 'repository', 'video', 'paper', 'artwork', 'other'] },
@@ -17,8 +25,8 @@ const itemFields = {
 const schema = {
   backend_info: object({}), list_digests: object({}),
   open_digest: object({ digest_id: id }, []),
-  create_digest: object({ ...digestFields, request_key: id }),
-  update_digest: object({ digest_id: id, expected_revision: revision, ...digestFields }),
+  create_digest: object({ ...digestFields, request_key: id }, ['name', 'prompt', 'domains', 'request_key']),
+  update_digest: object({ digest_id: id, expected_revision: revision, ...digestFields }, ['digest_id', 'expected_revision', 'name', 'prompt', 'domains']),
   get_digest: object({ digest_id: id }),
   list_editions: object({ digest_id: id, offset: page }, ['digest_id']),
   get_edition: object({ digest_id: id, edition_id: id }),
@@ -34,8 +42,8 @@ const descriptions = {
   backend_info: 'Read backend version and compatibility without changing any records.',
   list_digests: 'List the current user’s digests.',
   open_digest: 'Open the Digest library in the sidebar or beside this conversation. Pass a digest ID when known.',
-  create_digest: 'Create a digest with its explicit prompt and non-exhaustive preferred domains. Reuse request_key on retries.',
-  update_digest: 'Edit a digest’s explicit configuration. Requires the current revision to prevent overwriting another device’s edits.',
+  create_digest: 'Create a digest with prompt, preferred domains, target item count and desired frequency. Frequency needs a separate cloud schedule; this tool does not activate one. Reuse request_key on retries.',
+  update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. Frequency changes must also be applied to its cloud job.',
   get_digest: 'Read the current digest configuration and revision.',
   list_editions: 'Read dated editions, 30 at a time; continue with next_offset.',
   get_edition: 'Read an edition’s article cards and current feedback.',
@@ -79,6 +87,22 @@ export function validate(value, rule, path = 'arguments') {
 export function validateTool(name, args) {
   if (!Object.hasOwn(schema, name)) throw new DigestError('Unknown tool.', 404);
   validate(args, schema[name]);
+}
+export function normalizeSchedule(input = { frequency: 'manual' }) {
+  validate(input, scheduleSchema, 'schedule');
+  if (input.frequency === 'manual') return { frequency: 'manual' };
+  if (input.hour === undefined || input.utc_offset_minutes === undefined || input.utc_offset_minutes % 60 !== 0)
+    throw new DigestError('A recurring schedule needs an hour and a UTC offset in whole hours.');
+  const schedule = { frequency: input.frequency, hour: input.hour, utc_offset_minutes: input.utc_offset_minutes };
+  if (input.frequency === 'weekly') {
+    if (input.weekday === undefined) throw new DigestError('Choose a day of the week.');
+    schedule.weekday = input.weekday;
+  }
+  if (input.frequency === 'monthly') {
+    if (input.month_day === undefined) throw new DigestError('Choose a day of the month.');
+    schedule.month_day = input.month_day;
+  }
+  return schedule;
 }
 export function safeUrl(input) {
   let url;
