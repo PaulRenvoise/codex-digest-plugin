@@ -63,7 +63,7 @@ export function createWorker(html) {
         if (message.method === 'resources/templates/list') return { ...CACHE_HINT, resourceTemplates: [] };
         if (message.method === 'resources/read') {
           // Existing conversations retain the original descriptor until refreshed.
-          if (![UI_URI, 'ui://digest/library.html', 'ui://digest/library-0.1.1.html'].includes(message.params?.uri)) throw new DigestError('Resource not found.', 404);
+          if (![UI_URI, 'ui://digest/library.html', 'ui://digest/library-0.1.1.html', 'ui://digest/library-0.2.0.html'].includes(message.params?.uri)) throw new DigestError('Resource not found.', 404);
           return { ...CACHE_HINT, contents: [{ uri: message.params.uri, mimeType: MIME, text: html,
             _meta: {
               ui: { prefersBorder: false, csp: { connectDomains: [], resourceDomains: [] } },

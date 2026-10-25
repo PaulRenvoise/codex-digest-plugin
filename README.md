@@ -40,9 +40,9 @@ The desktop integration was verified in the desktop MCP App panel: the hosted li
 
 Choose 1–30 items per edition (default 12). Generation uses this target and returns fewer when there are not enough useful links.
 
-Frequency can be manual, daily at an hour, weekly on a weekday at an hour, or monthly on a date at an hour. UTC offsets are fixed whole hours from UTC−12 to UTC+14; they do not follow daylight saving. Monthly dates use the last day in shorter months.
+The form offers daily, weekly, and monthly frequency as one sentence, with the relevant day, hour, and UTC offset. New digests default to daily. UTC offsets are fixed whole hours from UTC−12 to UTC+14; they do not follow daylight saving. Monthly dates use the last day in shorter months.
 
-Saving a changed frequency sends a request to ChatGPT to apply a linked Sites cloud task. The standalone fallback provides a request to copy. The saved cadence is not an active-job indicator: ChatGPT must verify access, create or update the scheduler task, and confirm its actual status. No task is created just by installing the plugin. Scheduled runs reread the current item count and editorial settings; an old schedule must skip work after its cadence changes or is set to manual.
+Saving a changed frequency sends a request to ChatGPT to apply a linked Sites cloud task. The standalone fallback provides a request to copy. The saved cadence is not an active-job indicator: ChatGPT must verify access, create or update the scheduler task, and confirm its actual status. No task is created just by installing the plugin. Scheduled runs reread the current item count and editorial settings; an old schedule must skip work after its cadence changes or is disabled through the scheduler.
 
 ## Local development
 

@@ -7,7 +7,7 @@
 :root[data-theme="light"]{color-scheme:light;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee}
 :root[data-theme="dark"]{color-scheme:dark;--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:850px;margin:auto;padding:16px}button,input,select,textarea{font:inherit;color:inherit}button{padding:8px 12px;min-height:40px;background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer}button:hover{background:var(--soft)}button:disabled{opacity:.5;cursor:wait}button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}.primary{background:var(--ink);color:var(--bg)}input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;max-width:100%;font:inherit}textarea{width:100%;resize:vertical}.toolbar,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar select,.controls select{flex:1;min-width:120px}#status{font-size:12px;color:var(--muted);margin:8px 0}#status:empty{display:none}#status.error,#form-error{color:#c44}.card{padding:18px 0;border-bottom:1px solid var(--line)}.meta{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;color:var(--muted)}.card h2{font-size:17px;line-height:1.4;margin:8px 0;font-weight:600}.card a{color:inherit;text-decoration:none}.card a:hover{text-decoration:underline}.summary{margin:8px 0 12px}.tags{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:11px;margin-bottom:10px}.tag{padding:2px 6px;background:var(--soft);border-radius:4px}.actions{margin:0}.actions button{min-width:42px;font-size:17px}.update,.help{font-size:12px;color:var(--muted)}.empty{padding:25px 0;color:var(--muted)}dialog{width:min(540px,calc(100% - 24px));max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px}dialog::backdrop{background:#0005}dialog h2{font-size:18px;margin:0 0 15px}form label{display:block;margin:14px 0 5px;font-weight:600}form input{width:100%}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}[hidden]{display:none!important}@media(max-width:440px){main{padding:12px}.toolbar{gap:6px}.toolbar button{padding:8px}}
-.schedule-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.schedule-row label{margin:0;font-weight:400}.schedule-row input{width:78px}.schedule-row select{flex:0 1 auto}.schedule-field{display:flex;gap:6px;align-items:center}#frequency{width:100%}#item-count{width:90px}
+.schedule-row{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;white-space:nowrap;overflow-x:auto;padding-bottom:2px}.schedule-row>*{flex-shrink:0}.schedule-row label{margin:0;font-weight:400}.schedule-row input{width:58px}.schedule-row select{flex:0 0 auto;padding:9px 5px}.schedule-field{display:flex;gap:6px;align-items:center}#frequency{width:auto}#item-count{width:90px}
 </style></head><body><main>
   <div class="toolbar"><button id="new" class="quiet">+ New digest</button></div>
   <div id="library" hidden>
@@ -21,8 +21,9 @@
 </main>
 <dialog id="editor"><form id="digest-form"><h2 id="editor-title">New digest</h2>
   <label for="name">Name</label><input id="name" maxlength="100" required placeholder="Game Dev, Art, World News…">
-  <label for="frequency">Frequency</label><select id="frequency"><option value="manual">Manually</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option></select>
-  <div id="schedule-fields" class="schedule-row" hidden style="margin-top:8px">
+  <label for="frequency">Frequency</label>
+  <div id="schedule-fields" class="schedule-row">
+    <span>Every</span><select id="frequency"><option value="daily">day</option><option value="weekly">week</option><option value="monthly">month</option></select>
     <div id="weekday-field" class="schedule-field" hidden><label for="weekday">on</label><select id="weekday" aria-label="Day of the week"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></div>
     <div id="monthday-field" class="schedule-field" hidden><label for="monthday">on day</label><input id="monthday" aria-label="Day of the month" type="number" min="1" max="31" step="1" value="1"></div>
     <div class="schedule-field"><label for="hour">at</label><select id="hour" aria-label="Hour of the day"></select></div>
@@ -162,15 +163,14 @@
   for (let hour = 0; hour < 24; hour++) option($('hour'), String(hour), `${String(hour).padStart(2, '0')}:00`);
   for (let offset = -12; offset <= 14; offset++) option($('utc-offset'), String(offset), `${offset >= 0 ? '+' : '−'}${Math.abs(offset)}`);
   function scheduleFields() {
-    const frequency = $('frequency').value, recurring = frequency !== 'manual';
-    $('schedule-fields').hidden = !recurring; $('schedule-help').hidden = !recurring;
+    const frequency = $('frequency').value;
+    $('schedule-help').hidden = false;
     $('weekday-field').hidden = frequency !== 'weekly'; $('monthday-field').hidden = frequency !== 'monthly';
     $('monthday').disabled = frequency !== 'monthly'; $('monthday').required = frequency === 'monthly';
     $('schedule-help').textContent = `Fixed UTC offset. ${frequency === 'monthly' ? 'Shorter months use their last day. ' : ''}Saving requests setup in ChatGPT. Check the job status there.`;
   }
   function formSchedule() {
     const frequency = $('frequency').value;
-    if (frequency === 'manual') return { frequency };
     return { frequency, hour: Number($('hour').value), utc_offset_minutes: Number($('utc-offset').value) * 60,
       ...(frequency === 'weekly' ? { weekday: Number($('weekday').value) } : {}),
       ...(frequency === 'monthly' ? { month_day: Number($('monthday').value) } : {}) };
@@ -179,7 +179,7 @@
   function editDigest(digest = null) {
     editorDigest = digest; createKey = crypto.randomUUID(); $('name').value = digest?.name ?? ''; $('prompt').value = digest?.prompt ?? ''; $('domains').value = digest?.domains.join('\n') ?? '';
     const schedule = digest?.schedule ?? { frequency: 'manual' };
-    $('item-count').value = digest?.items_per_edition ?? 12; $('frequency').value = schedule.frequency;
+    $('item-count').value = digest?.items_per_edition ?? 12; $('frequency').value = schedule.frequency === 'manual' ? 'daily' : schedule.frequency;
     $('hour').value = schedule.hour ?? 9; $('weekday').value = schedule.weekday ?? 1; $('monthday').value = schedule.month_day ?? 1;
     const localOffset = -new Date().getTimezoneOffset() / 60;
     $('utc-offset').value = schedule.utc_offset_minutes === undefined ? (Number.isInteger(localOffset) && localOffset >= -12 && localOffset <= 14 ? localOffset : 0) : schedule.utc_offset_minutes / 60;
@@ -196,7 +196,7 @@
     try {
       const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
       $('editor').close(); await loadLibrary(data.digest.id);
-      if (scheduleChanged) await sendPrompt(`Apply the saved schedule for my Digest ${JSON.stringify(data.digest.name)} (digest_id: ${data.digest.id}). Read its current configuration and use the connected Digest backend's Sites cloud scheduler. The saved schedule is ${JSON.stringify(data.digest.schedule)}. Check linked jobs and update the existing one rather than creating duplicates. Manual means stop recurring generation. Keep the fixed UTC offset and use the last day of shorter months for monthly dates. Each run must reread the prompt, items_per_edition, history and votes, and skip if the saved schedule no longer matches. Confirm the actual job status; don't report it active merely because settings were saved.`, 'Settings saved. Schedule request sent to ChatGPT; check its confirmation.');
+      if (scheduleChanged) await sendPrompt(`Apply the saved schedule for my Digest ${JSON.stringify(data.digest.name)} (digest_id: ${data.digest.id}). Read its current configuration and use the connected Digest backend's Sites cloud scheduler. The saved schedule is ${JSON.stringify(data.digest.schedule)}. Check linked jobs and update the existing one rather than creating duplicates. Keep the fixed UTC offset and use the last day of shorter months for monthly dates. Each run must reread the prompt, items_per_edition, history and votes, and skip if the saved schedule no longer matches. Confirm the actual job status; don't report it active merely because settings were saved.`, 'Settings saved. Schedule request sent to ChatGPT; check its confirmation.');
       else status('Settings saved.');
     } catch (error) { $('form-error').textContent = error.message; }
     finally { $('save-digest').disabled = false; }
@@ -224,7 +224,7 @@
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.2.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.2.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digest through its connected plugin to load your library.', true); });
   else loadLibrary();
