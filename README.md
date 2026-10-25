@@ -9,9 +9,9 @@ Each user deploys a private backend to their own ChatGPT Site. Digests, articles
 1. Install this repository as a Codex plugin using its marketplace, or add the repository through your supported plugin installation UI. The marketplace is `.agents/plugins/marketplace.json`; the companion plugin manifest is `plugins/digests/.codex-plugin/plugin.json`.
 2. Ask **“Use setup-digest to create my Digest backend on Sites.”** Sites must be available in the setup session. Alternatively, identify an existing Digest Site to connect.
 3. Setup deploys the bundled backend template to a private Site and connects the runtime plugin that Sites creates. Complete the native installation/sign-in flow if prompted.
-4. Open the deployed Digest plugin, choose **New digest**, and supply a prompt and preferred domains. **Find more** asks ChatGPT to research and save a new edition.
+4. Open the deployed Digests plugin, choose **New digest**, and supply a prompt and preferred domains. **Find more** asks ChatGPT to research and save a new edition.
 
-The GitHub companion supplies setup, upgrade and research skills. The deployed Site supplies the actual data tools and interface. These are separate plugin registrations: changing a URL in product settings does not reconfigure ChatGPT's server connection. The remote server includes research instructions so ordinary use does not depend on local scripts.
+The GitHub companion supplies setup, upgrade and research skills. The deployed Site supplies the actual data tools and interface. Sites creates an app connection alongside its runtime plugin; that connection can appear in the host’s Apps settings. The GitHub companion and hosted runtime are separate plugin registrations: changing a URL in product settings does not reconfigure ChatGPT's server connection. The remote server includes research instructions so ordinary use does not depend on local scripts.
 
 ## What is included
 
@@ -34,7 +34,7 @@ The browser UI and embedded MCP UI use the same database. A regular browser visi
 
 Native UI metadata is implemented, but availability of custom plugin UI, settings and mobile presentation depends on the host/account. Verify the generated Sites plugin on your intended clients. A passing backend test or responsive browser preview does not establish native mobile compatibility. The setup skill reports these separately.
 
-The desktop integration was verified in the desktop MCP App panel: the hosted library loads and the New digest form opens. Automated tests cover votes and the embedded host message flow; mobile rendering and live panel vote persistence remain unverified. Open Digest through its plugin entry point for normal use; the standalone Site is an optional fallback.
+The desktop integration was verified in the desktop MCP App panel: the hosted library loads and the New digest form opens. Automated tests cover votes and the embedded host message flow; mobile rendering and live panel vote persistence remain unverified. Open Digests through its plugin entry point for normal use; the standalone Site is an optional fallback.
 
 ## Per-digest settings
 

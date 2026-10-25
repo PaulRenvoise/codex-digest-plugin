@@ -1,6 +1,6 @@
 ---
 name: manage-digest
-description: Create or edit digest settings and cloud schedules, open editions, and inspect existing feedback through a connected Digest backend.
+description: Create or edit digest settings and cloud schedules, open editions, and inspect existing feedback through a connected Digestss backend.
 ---
 
 # Manage digests

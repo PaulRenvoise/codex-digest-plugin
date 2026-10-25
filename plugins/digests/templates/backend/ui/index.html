@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Digest</title>
+<title>Digests</title>
 <style>
 :root{color-scheme:light dark;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee;font:14px/1.5 system-ui,-apple-system,sans-serif}
 @media(prefers-color-scheme:dark){:root{--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}}
@@ -57,7 +57,7 @@
     else if (!embedded) {
       const response = await fetch('/api/call', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, arguments: args }) });
       const body = await response.json(); if (!response.ok) throw new Error(body.error || 'Request failed.'); return body;
-    } else throw new Error('The plugin connection is unavailable. Reopen Digest from your connected plugin.');
+    } else throw new Error('The plugin connection is unavailable. Reopen Digests from your connected plugin.');
     if (result?.isError) throw new Error(result.content?.find(c => c.type === 'text')?.text || 'Request failed.');
     return result?.structuredContent ?? JSON.parse(result.content.find(c => c.type === 'text').text);
   }
@@ -158,7 +158,7 @@
   }
   function generate() {
     if (!selectedId) return;
-    sendPrompt(`Generate a new edition for my Digest named ${JSON.stringify(selected().name)} (digest_id: ${selectedId}). Read get_research_context and all pages of prior links and feedback first. Aim for the saved items_per_edition, returning fewer if quality warrants it. Search and verify sources, follow the saved prompt, and explore beyond preferred domains. Save the selection with save_edition and show it with open_digest.`);
+    sendPrompt(`Generate a new edition for my digest named ${JSON.stringify(selected().name)} (digest_id: ${selectedId}). Read get_research_context and all pages of prior links and feedback first. Aim for the saved items_per_edition, returning fewer if quality warrants it. Search and verify sources, follow the saved prompt, and explore beyond preferred domains. Save the selection with save_edition and show it with open_digest.`);
   }
   for (let hour = 0; hour < 24; hour++) option($('hour'), String(hour), `${String(hour).padStart(2, '0')}:00`);
   for (let offset = -12; offset <= 14; offset++) option($('utc-offset'), String(offset), `${offset >= 0 ? '+' : '−'}${Math.abs(offset)}`);
@@ -196,7 +196,7 @@
     try {
       const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
       $('editor').close(); await loadLibrary(data.digest.id);
-      if (scheduleChanged) await sendPrompt(`Apply the saved schedule for my Digest ${JSON.stringify(data.digest.name)} (digest_id: ${data.digest.id}). Read its current configuration and use the connected Digest backend's Sites cloud scheduler. The saved schedule is ${JSON.stringify(data.digest.schedule)}. Check linked jobs and update the existing one rather than creating duplicates. Keep the fixed UTC offset and use the last day of shorter months for monthly dates. Each run must reread the prompt, items_per_edition, history and votes, and skip if the saved schedule no longer matches. Confirm the actual job status; don't report it active merely because settings were saved.`, 'Settings saved. Schedule request sent to ChatGPT; check its confirmation.');
+      if (scheduleChanged) await sendPrompt(`Apply the saved schedule for my digest ${JSON.stringify(data.digest.name)} (digest_id: ${data.digest.id}). Read its current configuration and use the connected Digests backend's Sites cloud scheduler. The saved schedule is ${JSON.stringify(data.digest.schedule)}. Check linked jobs and update the existing one rather than creating duplicates. Keep the fixed UTC offset and use the last day of shorter months for monthly dates. Each run must reread the prompt, items_per_edition, history and votes, and skip if the saved schedule no longer matches. Confirm the actual job status; don't report it active merely because settings were saved.`, 'Settings saved. Schedule request sent to ChatGPT; check its confirmation.');
       else status('Settings saved.');
     } catch (error) { $('form-error').textContent = error.message; }
     finally { $('save-digest').disabled = false; }
@@ -224,9 +224,9 @@
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digest', version: '0.2.3' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.2.4' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); if (result?.hostContext?.theme) document.documentElement.dataset.theme = result.hostContext.theme; loadLibrary(selectedId); })
-    .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digest through its connected plugin to load your library.', true); });
+    .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();
 })();
 </script></body></html>

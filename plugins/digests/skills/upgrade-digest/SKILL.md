@@ -1,9 +1,9 @@
 ---
 name: upgrade-digest
-description: Upgrade an existing personal Digest Site from this plugin's versioned backend template while preserving its Site identity, database, access settings and user data.
+description: Upgrade an existing personal Digests Site from this plugin's versioned backend template while preserving its Site identity, database, access settings and user data.
 ---
 
-# Upgrade a Digest backend
+# Upgrade a Digests backend
 
 Resolve the existing Site and read its identity, current access and backend version. Read [the deployment contract](../../references/deployment.md) and the current Sites skill. Open the Site's actual source checkout using Sites' source helper; do not create another Site.
 

@@ -1,4 +1,4 @@
-export const VERSION = '0.2.3';
+export const VERSION = '0.2.4';
 export const UI_URI = `ui://digest/library-${VERSION}.html`;
 export class DigestError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -15,7 +15,7 @@ const scheduleSchema = object({
   month_day: { type: 'integer', minimum: 1, maximum: 31, description: 'Monthly date; shorter months use their last day.' },
   utc_offset_minutes: { type: 'integer', minimum: -720, maximum: 840, description: 'Fixed UTC offset in minutes, in whole hours. UTC+2 is 120. No daylight saving.' }
 }, ['frequency', 'hour', 'utc_offset_minutes']);
-const digestFields = { name: str(100), prompt: { ...str(16000), description: 'What to look for: topics, interests, depth, freshness and exclusions. Digest controls presentation.' }, domains: { type: 'array', items: str(2048), maxItems: 100 },
+const digestFields = { name: str(100), prompt: { ...str(16000), description: 'What to look for: topics, interests, depth, freshness and exclusions. Digests controls presentation.' }, domains: { type: 'array', items: str(2048), maxItems: 100 },
   items_per_edition: { type: 'integer', minimum: 1, maximum: 30, description: 'Target count; default 12. Return fewer rather than pad a weak selection.' }, schedule: scheduleSchema };
 const itemFields = {
   title: str(400), url: str(4096), summary: str(3000),
@@ -41,7 +41,7 @@ const schema = {
 const descriptions = {
   backend_info: 'Read backend version and compatibility without changing any records.',
   list_digests: 'List the current user’s digests.',
-  open_digest: 'Open the Digest library in the sidebar or beside this conversation. Pass a digest ID when known.',
+  open_digest: 'Open the Digests library in the sidebar or beside this conversation. Pass a digest ID when known.',
   create_digest: 'Create a digest with prompt, preferred domains, target item count and desired frequency. Frequency needs a separate cloud schedule; this tool does not activate one. Reuse request_key on retries.',
   update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. Frequency changes must also be applied to its cloud job.',
   get_digest: 'Read the current digest configuration and revision.',
@@ -55,7 +55,7 @@ const descriptions = {
 };
 const writes = new Set(['create_digest', 'update_digest', 'save_edition', 'save_feedback', 'settings_update']);
 export const TOOLS = Object.entries(schema).map(([name, inputSchema]) => ({
-  name, title: name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
+  name, title: name === 'open_digest' ? 'Open Digests' : name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
   outputSchema: { type: 'object', additionalProperties: true },
   annotations: { readOnlyHint: !writes.has(name), destructiveHint: false, openWorldHint: false, idempotentHint: true },
   _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true },
