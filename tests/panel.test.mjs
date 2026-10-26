@@ -3,6 +3,47 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 
+for (const standardBridge of [true, false]) test(`ChatGPT safe areas survive initialization and update without reloading (${standardBridge ? 'both bridges' : 'legacy only'})`, async () => {
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
+  const listeners = new Map(), elements = new Map(), calls = [];
+  const element = () => ({ value: '', dataset: {}, style: { setProperty(k, v) { this[k] = v; } },
+    classList: { toggle() {} }, append() {}, replaceChildren() {}, setAttribute() {} });
+  const document = { documentElement: element(), addEventListener() {}, createElement: element,
+    getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); } };
+  const tool = name => { calls.push(name); return { structuredContent: name === 'list_digests' ? { digests: [] } : { values: {} } }; };
+  const parent = { postMessage(message) {
+    if (!message.id) return;
+    queueMicrotask(() => listeners.get('message')({ source: parent, data: { jsonrpc: '2.0', id: message.id,
+      ...(message.method === 'ui/initialize' ? standardBridge
+        ? { result: { hostContext: { safeAreaInsets: { top: 0, right: 0, bottom: 0, left: 0 } } } }
+        : { error: { message: 'Standard bridge unavailable' } }
+        : { result: tool(message.params.name) }) } }));
+  } };
+  const window = { parent, openai: { theme: 'dark', safeArea: { insets: { top: 108, bottom: 84, left: 0, right: 0 } }, callTool: async name => tool(name) },
+    addEventListener(name, fn) { listeners.set(name, fn); } };
+  runInNewContext(html.split('<script>')[1].split('</script>')[0], { window, document, setTimeout, clearTimeout, URL });
+  const style = document.documentElement.style;
+  assert.equal(style['--safe-top'], '108px', 'initial globals apply before asynchronous bridge initialization');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(style['--safe-top'], '108px', 'standard zero defaults cannot erase ChatGPT overlays');
+  assert.equal(style['--safe-bottom'], '84px');
+  const reads = calls.length;
+  const globals = value => listeners.get('openai:set_globals')({ detail: { globals: value } });
+  globals({ theme: 'light' });
+  assert.equal(style['--safe-top'], '108px');
+  globals({ safeArea: { insets: { bottom: 300 } } });
+  assert.equal(style['--safe-bottom'], '300px', 'composer/keyboard changes apply');
+  globals({ safeArea: { insets: { top: 64, bottom: 60, left: 44, right: 44 } } });
+  assert.equal(style['--safe-left'], '44px', 'rotation updates every edge');
+  globals({ safeArea: { insets: { top: -1, bottom: 'invalid' } } });
+  assert.equal(style['--safe-top'], '64px');
+  assert.equal(style['--safe-bottom'], '60px');
+  globals({ safeArea: { insets: { top: 0, bottom: 0, left: 0, right: 0 } } });
+  assert.equal(style['--safe-top'], '0px');
+  assert.equal(style['--safe-bottom'], '0px', 'leaving fullscreen clears the overlays');
+  assert.equal(calls.length, reads, 'layout updates do not reload data or send messages');
+});
+
 // Exercise the real embedded script against a host that delivers both RPC replies
 // and tool lifecycle notifications, without a browser or network dependency.
 test('panel refreshes through data tools and honors host selection without reopening itself', async () => {

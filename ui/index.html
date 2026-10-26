@@ -10,10 +10,10 @@
 .schedule-row{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;white-space:nowrap;overflow-x:auto;padding-bottom:2px}.schedule-row>*{flex-shrink:0}.schedule-row label{margin:0;font-weight:400}.schedule-row input{width:58px}.schedule-row select{flex:0 0 auto;padding:9px 5px}.schedule-field{display:flex;gap:6px;align-items:center}#frequency{width:auto}#item-count{width:90px}
 /* The host reserves space for its header and mobile system controls. Keep the
    scrolling library and top-layer dialog inside the same safe rectangle. */
-:root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
-body{height:100vh;height:100dvh;overflow:hidden;padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left)}
+:root{--safe-top:0px;--safe-right:0px;--safe-bottom:0px;--safe-left:0px;--inset-top:max(env(safe-area-inset-top,0px),var(--safe-top));--inset-right:max(env(safe-area-inset-right,0px),var(--safe-right));--inset-bottom:max(env(safe-area-inset-bottom,0px),var(--safe-bottom));--inset-left:max(env(safe-area-inset-left,0px),var(--safe-left))}
+body{height:100vh;height:100dvh;overflow:hidden;padding:var(--inset-top) var(--inset-right) var(--inset-bottom) var(--inset-left)}
 main{width:100%;height:100%;overflow:auto;overflow-wrap:anywhere}
-dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 12px);margin:auto;width:min(540px,calc(100% - var(--safe-left) - var(--safe-right) - 24px));max-height:calc(100% - var(--safe-top) - var(--safe-bottom) - 24px)}
+dialog{inset:calc(var(--inset-top) + 12px) calc(var(--inset-right) + 12px) calc(var(--inset-bottom) + 12px) calc(var(--inset-left) + 12px);margin:auto;width:min(540px,calc(100% - var(--inset-left) - var(--inset-right) - 24px));max-height:calc(100% - var(--inset-top) - var(--inset-bottom) - 24px)}
 </style></head><body><main>
   <div class="toolbar"><button id="new" class="quiet">+ New digest</button></div>
   <div id="library" hidden>
@@ -54,12 +54,20 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
       pending.set(id, { resolve, reject, timer }); post({ id, method, params });
     });
   }
-  function applyHostContext(context = {}) {
+  const hostInsets = { mcp: {}, legacy: {} };
+  function applyHostContext(context = {}, source = 'mcp') {
     if (context.theme) document.documentElement.dataset.theme = context.theme;
-    if (context.safeAreaInsets) {
+    const insets = context.safeAreaInsets ?? context.safeArea?.insets;
+    if (insets) {
       for (const side of ['top', 'right', 'bottom', 'left']) {
-        const value = context.safeAreaInsets[side];
-        if (Number.isFinite(value) && value >= 0) document.documentElement.style.setProperty(`--safe-${side}`, `${value}px`);
+        const value = insets[side];
+        if (Number.isFinite(value) && value >= 0) {
+          hostInsets[source][side] = value;
+          // Some hosts expose both bridges, but only one carries their overlays.
+          // Do not let a zero/default from one erase the other's safe rectangle.
+          const inset = Math.max(hostInsets.mcp[side] ?? 0, hostInsets.legacy[side] ?? 0);
+          document.documentElement.style.setProperty(`--safe-${side}`, `${inset}px`);
+        }
       }
     }
   }
@@ -239,7 +247,9 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.2' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  window.addEventListener('openai:set_globals', event => applyHostContext(event.detail?.globals, 'legacy'));
+  applyHostContext(window.openai, 'legacy');
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.3' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();
