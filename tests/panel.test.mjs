@@ -81,6 +81,7 @@ test('panel refreshes through data tools and honors host selection without reope
   runInNewContext(html.split('<script>')[1].split('</script>')[0], { window, document, setTimeout, clearTimeout, URL });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(elements.get('digest-select').value, 'first');
+  assert.equal(elements.get('digest-select').children.at(-1).textContent, '+ New digest');
   assert.equal(document.documentElement.dataset.theme, 'dark');
   const style = document.documentElement.style;
   assert.equal(style['--safe-top'], '64px');
@@ -153,12 +154,21 @@ test('creation and settings saves call the backend without sending conversation 
   await new Promise(resolve => setImmediate(resolve));
   const field = id => elements.get(id);
   const submit = () => field('digest-form').onsubmit({ preventDefault() {} });
-  field('new').onclick();
+  assert.equal(field('library').hidden, false, 'an empty library still exposes the create dropdown');
+  assert.equal(field('edit').disabled, true);
+  field('digest-select').value = '__new_digest__'; field('digest-select').onchange();
+  assert.equal(field('editor').open, true);
+  assert.equal(field('digest-select').value, '');
   field('name').value = 'Art'; field('prompt').value = 'New drawing techniques'; field('domains').value = 'example.com';
   await submit();
   assert.equal(writes[0].name, 'create_digest');
   assert.equal(field('editor').open, false);
   assert.match(field('status').textContent, /Digest created/);
+  assert.equal(field('edit').disabled, false);
+  field('digest-select').value = '__new_digest__'; field('digest-select').onchange();
+  field('cancel').onclick();
+  assert.equal(field('digest-select').value, 'created', 'cancel keeps the previous digest selected');
+  assert.equal(writes.length, 1, 'opening and cancelling creation does not save or send a message');
 
   field('edit').onclick();
   field('frequency').value = 'weekly'; field('weekday').value = '2'; field('hour').value = '10'; field('utc-offset').value = '2';
