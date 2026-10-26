@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const html = await readFile(path.join(root, 'ui/index.html'), 'utf8');
-const modules = await Promise.all(['contract', 'service', 'worker'].map(name => readFile(path.join(root, `src/${name}.mjs`), 'utf8')));
+const modules = await Promise.all(['contract', 'schedule', 'service', 'worker'].map(name => readFile(path.join(root, `src/${name}.mjs`), 'utf8')));
 // Fixed, dependency-free modules: concatenate in dependency order, keeping exports.
 const source = modules.map(text => text.replace(/^import .*;\n/gm, '')).join('\n') + `\nexport default createWorker(${JSON.stringify(html)});\n`;
 const loaded = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);

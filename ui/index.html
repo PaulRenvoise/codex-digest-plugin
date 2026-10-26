@@ -185,7 +185,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     $('schedule-help').hidden = false;
     $('weekday-field').hidden = frequency !== 'weekly'; $('monthday-field').hidden = frequency !== 'monthly';
     $('monthday').disabled = frequency !== 'monthly'; $('monthday').required = frequency === 'monthly';
-    $('schedule-help').textContent = `Fixed UTC offset. ${frequency === 'monthly' ? 'Shorter months use their last day. ' : ''}Saved timing only; scheduled jobs are managed separately.`;
+    $('schedule-help').textContent = `Fixed UTC offset. ${frequency === 'monthly' ? 'Shorter months use their last day. ' : ''}Changes apply on the next hourly check. Requires the shared hourly task to be enabled.`;
   }
   function formSchedule() {
     const frequency = $('frequency').value;
@@ -212,7 +212,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     try {
       const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
       $('editor').close(); await loadLibrary(data.digest.id);
-      status(editorDigest ? 'Settings saved. Scheduled jobs were not changed.' : 'Digest created. No scheduled job was created.');
+      status(editorDigest ? 'Settings saved.' : 'Digest created.');
     } catch (error) { $('form-error').textContent = error.message; }
     finally { $('save-digest').disabled = false; }
   };
@@ -239,7 +239,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.2' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

@@ -1,7 +1,8 @@
 import { VERSION, DigestError, validateTool, normalizeDomains, normalizeSchedule, canonicalUrl, safeUrl, stableId, RESEARCH_GUIDELINES } from './contract.mjs';
+import { nextOccurrence } from './schedule.mjs';
 
 export class DigestService {
-  constructor(db, owner) { this.db = db; this.owner = owner; }
+  constructor(db, owner, clock = () => new Date()) { this.db = db; this.owner = owner; this.clock = clock; }
   stmt(sql, ...args) { return this.db.prepare(sql).bind(...args); }
   async rows(sql, ...args) { return (await this.stmt(sql, ...args).all()).results; }
   async digest(id) {
@@ -11,7 +12,7 @@ export class DigestService {
     return { ...data, domains: JSON.parse(domains), schedule: JSON.parse(schedule) };
   }
   async listDigests() {
-    const rows = await this.rows('SELECT id, name, prompt, domains, items_per_edition, schedule, revision, created_at, updated_at FROM digests WHERE owner_id = ? ORDER BY created_at DESC, id', this.owner);
+    const rows = await this.rows('SELECT id, name, prompt, domains, items_per_edition, schedule, next_run_at, revision, created_at, updated_at FROM digests WHERE owner_id = ? ORDER BY created_at DESC, id', this.owner);
     return rows.map(row => ({ ...row, domains: JSON.parse(row.domains), schedule: JSON.parse(row.schedule) }));
   }
   async edition(digestId, editionId) {
@@ -24,12 +25,68 @@ export class DigestService {
       WHERE e.edition_id = ? ORDER BY e.position`, editionId);
     return { edition, items: items.map(row => ({ ...row, tags: JSON.parse(row.tags) })) };
   }
+  async scheduledRun(id, token) {
+    const run = await this.stmt(`SELECT r.* FROM digest_runs r JOIN digests d ON d.id = r.digest_id
+      WHERE r.id = ? AND r.claim_token = ? AND d.owner_id = ?`, id, token, this.owner).first();
+    if (!run) throw new DigestError('Scheduled run not found or claimed by another worker.', 409);
+    return run;
+  }
+  finishRun(run, digest, token, now, editionId) {
+    // The database trigger guards the claim inside the same transaction as the edition.
+    return [
+      this.stmt('UPDATE digest_runs SET status = ?, claim_token = ?, edition_id = ?, finished_at = ? WHERE id = ?',
+        editionId ? 'completed' : 'skipped', token, editionId, now, run.id),
+      this.stmt('UPDATE digests SET next_run_at = ? WHERE id = ? AND owner_id = ?',
+        nextOccurrence(digest.schedule, now), digest.id, this.owner)
+    ];
+  }
   async call(name, args = {}) {
     validateTool(name, args);
-    const now = new Date().toISOString();
+    const now = this.clock().toISOString();
+    const leaseUntil = new Date(new Date(now).getTime() + 3600000).toISOString();
     if (name === 'backend_info') return { product: 'digest', version: VERSION, schema_version: 1, authenticated: true };
     if (name === 'list_digests') return { digests: await this.listDigests() };
     if (name === 'get_digest') return { digest: await this.digest(args.digest_id) };
+    if (name === 'list_due_digests') {
+      // Existing installations start at their next occurrence, with no historical backlog.
+      for (const digest of await this.listDigests()) {
+        if (!digest.next_run_at) await this.stmt('UPDATE digests SET next_run_at = ? WHERE id = ? AND owner_id = ? AND revision = ? AND next_run_at IS NULL',
+          nextOccurrence(digest.schedule, now), digest.id, this.owner, digest.revision).run();
+      }
+      return { digests: (await this.listDigests()).filter(d => d.next_run_at && d.next_run_at <= now) };
+    }
+    if (name === 'claim_digest_run') {
+      const digest = await this.digest(args.digest_id);
+      const token = await stableId(this.owner, digest.id, 'claim', args.request_key);
+      const prior = await this.stmt('SELECT * FROM digest_runs WHERE digest_id = ? AND claim_token = ?', digest.id, token).first();
+      if (prior) return { run: prior };
+      if (!digest.next_run_at || digest.next_run_at > now) return { run: null };
+      const id = await stableId(digest.id, 'scheduled', digest.next_run_at);
+      const run = await this.stmt(`INSERT INTO digest_runs (id, digest_id, scheduled_for, digest_revision, claim_token, lease_until, status)
+        SELECT ?, id, next_run_at, revision, ?, ?, 'running' FROM digests
+        WHERE id = ? AND owner_id = ? AND revision = ? AND next_run_at = ? AND next_run_at <= ?
+        ON CONFLICT(digest_id, scheduled_for) DO UPDATE SET claim_token = excluded.claim_token,
+          lease_until = excluded.lease_until, digest_revision = excluded.digest_revision
+        WHERE digest_runs.status = 'running' AND (digest_runs.lease_until <= ? OR digest_runs.digest_revision != excluded.digest_revision)
+        RETURNING *`, id, token, leaseUntil, digest.id, this.owner, digest.revision, digest.next_run_at, now, now).first();
+      return { run: run ?? null };
+    }
+    if (name === 'renew_digest_run' || name === 'skip_digest_run') {
+      const run = await this.scheduledRun(args.run_id, args.claim_token);
+      if (name === 'skip_digest_run' && run.status === 'skipped') return { run };
+      if (name === 'renew_digest_run') {
+        const renewed = await this.stmt(`UPDATE digest_runs SET lease_until = ? WHERE id = ? AND claim_token = ?
+          AND status = 'running' AND lease_until > ? AND EXISTS (
+            SELECT 1 FROM digests WHERE id = digest_runs.digest_id AND revision = digest_runs.digest_revision AND next_run_at = digest_runs.scheduled_for) RETURNING *`,
+        leaseUntil, run.id, args.claim_token, now).first();
+        if (!renewed) throw new DigestError('Scheduled run expired or settings changed. Claim again with a new request key.', 409);
+        return { run: renewed };
+      }
+      const digest = await this.digest(run.digest_id);
+      try { await this.db.batch(this.finishRun(run, digest, args.claim_token, now, null)); }
+      catch (error) { if (/Scheduled run/.test(error.message)) throw new DigestError(error.message, 409); throw error; }
+      return { run: await this.scheduledRun(run.id, args.claim_token) };
+    }
     if (name === 'open_digest') {
       const digests = await this.listDigests();
       const prefs = await this.stmt('SELECT default_digest_id FROM preferences WHERE owner_id = ?', this.owner).first();
@@ -41,16 +98,17 @@ export class DigestService {
       const id = await stableId(this.owner, 'digest', args.request_key);
       const domains = normalizeDomains(args.domains);
       const schedule = normalizeSchedule(args.schedule);
-      await this.stmt(`INSERT INTO digests (id, owner_id, name, prompt, domains, items_per_edition, schedule, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`, id, this.owner, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? 12, JSON.stringify(schedule), now, now).run();
+      await this.stmt(`INSERT INTO digests (id, owner_id, name, prompt, domains, items_per_edition, schedule, next_run_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`, id, this.owner, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? 12, JSON.stringify(schedule), nextOccurrence(schedule, now), now, now).run();
       return { digest: await this.digest(id) };
     }
     if (name === 'update_digest') {
       const current = await this.digest(args.digest_id);
       const domains = normalizeDomains(args.domains);
       const schedule = normalizeSchedule(args.schedule ?? current.schedule);
-      const result = await this.stmt(`UPDATE digests SET name = ?, prompt = ?, domains = ?, items_per_edition = ?, schedule = ?, revision = revision + 1, updated_at = ?
-        WHERE id = ? AND owner_id = ? AND revision = ? RETURNING id`, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? current.items_per_edition, JSON.stringify(schedule), now,
+      const nextRun = JSON.stringify(schedule) === JSON.stringify(current.schedule) && current.next_run_at ? current.next_run_at : nextOccurrence(schedule, now);
+      const result = await this.stmt(`UPDATE digests SET name = ?, prompt = ?, domains = ?, items_per_edition = ?, schedule = ?, next_run_at = ?, revision = revision + 1, updated_at = ?
+        WHERE id = ? AND owner_id = ? AND revision = ? RETURNING id`, args.name.trim(), args.prompt.trim(), JSON.stringify(domains), args.items_per_edition ?? current.items_per_edition, JSON.stringify(schedule), nextRun, now,
         args.digest_id, this.owner, args.expected_revision).first();
       if (!result) throw new DigestError('This digest changed on another device. Reload before saving your changes.', 409);
       return { digest: await this.digest(args.digest_id) };
@@ -64,7 +122,10 @@ export class DigestService {
     }
     if (name === 'get_edition') return this.edition(args.digest_id, args.edition_id);
     if (name === 'save_edition') {
-      await this.digest(args.digest_id);
+      const digest = await this.digest(args.digest_id);
+      if (Boolean(args.run_id) !== Boolean(args.claim_token)) throw new DigestError('Scheduled saves require both run_id and claim_token.');
+      const run = args.run_id ? await this.scheduledRun(args.run_id, args.claim_token) : null;
+      if (run && (run.digest_id !== digest.id || args.request_key !== run.id)) throw new DigestError('Use the claimed digest and run_id as request_key.');
       const editionId = await stableId(args.digest_id, 'edition', args.request_key);
       const prior = await this.stmt('SELECT id FROM editions WHERE id = ? AND digest_id = ?', editionId, args.digest_id).first();
       if (prior) return this.edition(args.digest_id, prior.id);
@@ -91,10 +152,12 @@ export class DigestService {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, editionId, itemId, position, item.title.trim(), safeUrl(item.url).href,
           item.summary.trim(), item.kind, item.published_at || null, JSON.stringify(item.tags ?? []), item.update_note?.trim() ?? '', item.date_kind ?? ''));
       }
+      if (run) statements.push(...this.finishRun(run, digest, args.claim_token, now, editionId));
       try { await this.db.batch(statements); } catch (error) {
         // An identical retry can race with the first commit. Return its result, never append twice.
         const completed = await this.stmt('SELECT id FROM editions WHERE id = ? AND digest_id = ?', editionId, args.digest_id).first();
         if (completed) return this.edition(args.digest_id, completed.id);
+        if (/Scheduled run/.test(error.message)) throw new DigestError(error.message, 409);
         if (/UNIQUE constraint/i.test(error.message)) throw new DigestError('Another generation saved one of these links. Refresh the research context and retry with a new selection.', 409);
         throw error;
       }

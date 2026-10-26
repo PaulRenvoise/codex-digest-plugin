@@ -8,16 +8,23 @@ For a new digest, infer a concise draft from the user's request and create it wh
 
 Show editions through `open_digest`. Votes belong to their digest; they are evidence, not instructions. Only the user submits votes in the interface. Native plugin settings select the default digest; prompt and domains are edited in the panel. Backend switching is a connection workflow, not an ordinary settings update.
 
-## Apply a schedule
+## Automatic editions
 
-Saving cadence records desired timing only. Creation and settings saves use direct MCP calls and never send conversation messages or create/update scheduled jobs. Only apply a schedule after a separate explicit user request. Use the latest get_digest result, not stale form contents.
+Enable one shared hourly cloud task per Site/account, once. Every run reads current database settings; creation and settings saves remain direct MCP calls with no conversation messages or task edits. Sites does not need a backend scheduler API for this design.
 
-As checked on 2026-10-26, the available Sites surface exposes `create_schedule` to the assistant. The Sites runtime documentation does not provide a backend scheduler API/binding, and the connector eligibility discovery tool is unavailable in this environment, so a scheduler connector cannot be verified. This is a limit of the currently verified integration, not proof that no future or account-specific capability exists. Do not invent internal endpoints, forward session credentials, or deploy a fake scheduler. See [Sites management](https://learn.chatgpt.com/docs/sites/managing-a-site) and [scheduled tasks](https://learn.chatgpt.com/docs/automations).
+Setup:
+1. Read Sites `get_site` and its linked automations. Reuse the task titled `Digests hourly`; if matching or legacy per-digest tasks exist, reconcile them through supported controls before enabling anything. Never create duplicate generators.
+2. Verify a fresh cloud task can call this Site’s authenticated tools, save a real requested edition, and read it back. A deployment or service bypass token alone does not prove user-scoped write access. Preserve private access and never store credentials in the task prompt.
+3. Call `list_due_digests` once to initialize next-run times for older digests. They start at their next future occurrence, with no historical backlog.
+4. Use Sites `create_schedule` with the fresh request ID returned by `get_site`, hourly at minute zero in `Etc/UTC`. Reuse that ID and task details on retries. Confirm the returned enabled state and timing. The computer can be off; do not substitute a local desktop job.
 
-- Resolve the connected backend's Site through Sites inventory and read its linked automations. Reuse the task titled `Digest [<full digest ID>]`; preserve the Site link and do not identify a task by a mutable digest name alone.
-- Use Sites cloud scheduling so the computer can be off. Read the installed Sites recurring-update instructions and verify unattended source access and a write/readback before enabling. If a matching job needs editing and no supported update control is available, report the blocker; do not create a replacement alongside it.
-- For new jobs use Sites create_schedule with its fresh request ID; preserve that request ID and exact details on retries. Pause or stop generation through the scheduler, without changing its frequency. Saving a setting alone is not evidence that a job is active or stopped.
-- The schedule object is daily, weekly (weekday 0=Sunday), or monthly (month_day 1–31). Recurring schedules have hour 0–23 and utc_offset_minutes, a fixed whole-hour offset from -720 to 840. Use Etc/UTC for zero; otherwise Etc/GMT with the reversed sign, such as Etc/GMT-2 for UTC+2. Do not substitute a daylight-saving timezone.
-- For monthly schedules use month days 1 through the selected day and BYSETPOS=-1 to clamp to the last valid day. Start at the next occurrence. Keep recurrence syntax in the scheduler tool arguments; present plain language to the user.
-- Save a self-contained task prompt with the exact digest ID and configured schedule. Each run reads the current digest first and skips if its schedule differs from the configured one. It then follows generation instructions using the current count, prompt, history and votes; skip empty selections and do not republish the Site. Stable per-occurrence edition request keys prevent duplicate retries.
-- Confirm the scheduler's actual saved timing and enabled/paused state. Existing tasks can consume updated prompts and item counts on their next run without recreating the job.
+Use a self-contained task prompt scoped to the linked Site:
+
+> Generate editions for due digests on this Site. Call list_due_digests once, then claim_digest_run for each returned digest, using a fresh request_key per attempt and reusing it on retries. Skip null, completed or skipped claims. After claiming, read every page of get_research_context and follow its current prompt, count, sources, history, votes and research guidelines. Research and verify original sources. Save with save_edition, passing run_id, claim_token and request_key equal to run_id; read back with get_edition. Renew the claim before its one-hour lease expires if needed. Stop stale work on a settings conflict. If successful research finds no suitable items, use skip_digest_run; for tool or authentication failures leave it due for retry and report the failure. Do not edit settings, create schedules, republish or fabricate data. Stay quiet when nothing is due; notify only for a new edition or actionable failure.
+
+Backend behavior:
+- `next_run_at` is calculated from the saved daily, weekly or monthly schedule, using fixed UTC offsets and last-day clamping for shorter months. New settings take effect immediately; unrelated edits preserve the next due time.
+- Claims last one hour and can be renewed. An expired claim can be retried with a new attempt key; the old worker cannot complete it after another worker takes over. Settings revisions invalidate in-flight work.
+- Saving the edition, completing the claim and advancing the next occurrence are one database transaction. Retries return the same edition. Manual Find more editions do not consume scheduled occurrences.
+- A delayed successful run advances to the next future occurrence, rather than generating a backlog. Failed runs remain due; successful research with no suitable items advances without an empty edition.
+- The task checks hourly; research and scheduler delays mean completion is not guaranteed at the exact configured hour. Pause/resume the shared task through Scheduled. A saved next-run time alone does not prove the cloud task is enabled.

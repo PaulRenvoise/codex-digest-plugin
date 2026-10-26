@@ -29,6 +29,13 @@
       "when": 1792945000000,
       "tag": "0003_date_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793046000000,
+      "tag": "0004_digest_runs",
+      "breakpoints": true
     }
   ]
 }

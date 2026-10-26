@@ -1,6 +1,6 @@
 # Deployment and upgrades
 
-Use the installed Sites skill and supported Sites tools for source synchronization, credentials, publication, and connection. This repository is Site source, not an installable companion plugin. No separate model API key is required by the current backend; research runs in the invoking conversation.
+Use the installed Sites skill and supported Sites tools for source synchronization, credentials, publication, and connection. This repository is Site source, not an installable companion plugin. No separate model API key is required by the current backend; research runs in ChatGPT, either on demand or through the shared cloud task.
 
 ## New instance
 
@@ -37,7 +37,7 @@ Run tests/checks in the public source and build the deployment. Synchronize, pac
 - Keep MCP discovery/list/resource cache hints (`ttlMs: 0`, `cacheScope: "private"`). Preserve old UI resource URIs for cached conversations.
 - `open_digest` exposes global and thread entrypoints and returns the MCP Apps HTML resource. The embedded panel uses the host bridge; the optional browser fallback uses authenticated same-origin `/api/call`. Both use the same database. Refresh through data tools, not recursive `open_digest` calls.
 - Research and tool instructions are returned by the MCP server and `get_research_context`; they do not depend on a locally installed skill. [Research](research.md) and [management](management.md) document the workflows.
-- Scheduling remains a separate Sites cloud-task workflow. Verify unattended read/write access and actual scheduler state before claiming an active job. The backend currently stores desired cadence only. Settings saves never send conversation messages or synchronize jobs; scheduling requires a separate explicit request through supported task controls. No supported direct backend scheduler integration has been verified. Routine editions do not require republishing.
+- Enable one shared hourly Sites cloud task after verifying unattended read/write access. The backend owns per-digest next-run times and claims. Settings saves never send conversation messages or synchronize cloud jobs. Routine editions do not require republishing. See [scheduling](management.md).
 
 ## References
 

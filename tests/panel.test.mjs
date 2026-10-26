@@ -117,7 +117,7 @@ test('creation and settings saves call the backend without sending conversation 
   await submit();
   assert.equal(writes[0].name, 'create_digest');
   assert.equal(field('editor').open, false);
-  assert.match(field('status').textContent, /No scheduled job was created/);
+  assert.match(field('status').textContent, /Digest created/);
 
   field('edit').onclick();
   field('frequency').value = 'weekly'; field('weekday').value = '2'; field('hour').value = '10'; field('utc-offset').value = '2';
@@ -127,7 +127,7 @@ test('creation and settings saves call the backend without sending conversation 
     frequency: 'weekly', hour: 10, utc_offset_minutes: 120, weekday: 2
   });
   assert.equal(writes[1].args.expected_revision, 1);
-  assert.match(field('status').textContent, /Scheduled jobs were not changed/);
+  assert.match(field('status').textContent, /Settings saved/);
 
   field('edit').onclick(); field('item-count').value = '5'; await submit();
   assert.equal(writes[2].args.items_per_edition, 5);

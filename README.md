@@ -25,9 +25,9 @@ Already have a Digests Site? Ask the assistant to upgrade it using this reposito
 
 Research instructions come from the backend: verify original links and dates, diversify sources, and avoid previously included items. Canonical URL uniqueness is enforced per digest. See [research rules](docs/research.md).
 
-**Scheduling is not automatic yet.** Creating a digest or saving settings makes a direct backend call and sends no conversation message. Frequency is saved timing only; saves do not create or update cloud jobs. Direct job management from Site code has no verified supported integration. A saved frequency is not proof of an active job. See [management and scheduling](docs/management.md).
+**Automatic editions:** enable one shared hourly cloud task once. The backend tracks each digest’s next run; settings changes apply automatically without conversation messages or task edits. Claims and atomic saves prevent duplicate scheduled editions. See [setup and scheduling](docs/management.md).
 
-**Verification limits:** the embedded desktop panel and forms have been exercised; mobile safe areas were checked in simulated portrait/landscape previews. Actual mobile behavior and unattended generation remain unverified. A reported connection issue can leave the panel working while the assistant receives no backend tools; removing the companion package does not resolve that issue.
+The cloud task requires a connected Digests plugin and verified unattended read/write access for each deployment. Mobile safe areas have been checked in simulated previews; actual mobile behavior still needs device testing.
 
 ## Development
 

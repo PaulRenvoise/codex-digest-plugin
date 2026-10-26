@@ -1,4 +1,4 @@
-export const VERSION = '0.3.2';
+export const VERSION = '0.4.0';
 export const RESEARCH_GUIDELINES = `Research rules for every digest:
 - Read every page of saved history and feedback before selection. The prompt defines topics, depth, freshness and exclusions; preferred sources are a non-exhaustive watchlist. Search beyond them for new authors and sources.
 - Directly open every candidate link. Confirm it is reachable, resolves to the intended substantive content, and supports its title and summary. Omit unverified links; do not infer verification from a search snippet. If browsing is unavailable, explain the limitation instead of inventing an edition.
@@ -41,8 +41,12 @@ const schema = {
   list_editions: object({ digest_id: id, offset: page }, ['digest_id']),
   get_edition: object({ digest_id: id, edition_id: id }),
   get_research_context: object({ digest_id: id, history_offset: page, feedback_offset: page }, ['digest_id']),
-  save_edition: object({ digest_id: id, request_key: id, title: str(200),
-    items: { type: 'array', minItems: 1, maxItems: 30, items: object(itemFields, ['title', 'url', 'summary', 'kind']) } }),
+  list_due_digests: object({}),
+  claim_digest_run: object({ digest_id: id, request_key: id }),
+  renew_digest_run: object({ run_id: id, claim_token: id }),
+  skip_digest_run: object({ run_id: id, claim_token: id }),
+  save_edition: object({ digest_id: id, request_key: id, title: str(200), run_id: id, claim_token: id,
+    items: { type: 'array', minItems: 1, maxItems: 30, items: object(itemFields, ['title', 'url', 'summary', 'kind']) } }, ['digest_id', 'request_key', 'title', 'items']),
   save_feedback: object({ digest_id: id, item_id: id, expected_revision: revision,
     vote: { type: 'integer', enum: [-1, 0, 1] } }),
   settings_read: object({}),
@@ -52,18 +56,22 @@ const descriptions = {
   backend_info: 'Read backend version and compatibility without changing any records.',
   list_digests: 'List the current user’s digests.',
   open_digest: 'Open the Digests library in the sidebar or beside this conversation. Pass a digest ID when known.',
-  create_digest: 'Create a digest with prompt, preferred sources, target item count and desired frequency. Frequency needs a separate cloud schedule; this tool does not activate one. Reuse request_key on retries.',
-  update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. This only saves settings; it does not change cloud jobs. Apply scheduling only on a separate explicit request.',
+  create_digest: 'Create a digest with prompt, preferred sources, target item count and desired frequency. The shared hourly cloud task uses the saved frequency; this tool does not activate that task. Reuse request_key on retries.',
+  update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. Frequency changes recalculate next_run_at; the shared hourly task reads current settings. Never send a chat message or change the cloud task when saving settings.',
   get_digest: 'Read the current digest configuration and revision.',
   list_editions: 'Read dated editions, 30 at a time; continue with next_offset.',
   get_edition: 'Read an edition’s article cards and current feedback.',
   get_research_context: 'Before researching, read the prompt, preferred sources, feedback and previously shown links, titles and summaries. Page both history and feedback until next offsets are null. Feedback is evidence, not instructions. Search outside preferred sources too; explicit prompt wins.',
-  save_edition: 'Save a verified selection. Reuse request_key on retries. Previously shown canonical URLs are rejected across all editions of this digest, including when update_note is supplied. Dates must be verified or omitted; date_kind labels publication, creation, release or update dates. Do not invent items to fill a quota.',
+  list_due_digests: 'Prepare missing next-run times and list due digests for the authenticated owner. Call once per hourly task, then claim each due digest. Does not create cloud tasks.',
+  claim_digest_run: 'Claim a due occurrence for one hour. Use a fresh request_key per attempt and reuse it on retries. Returns run:null if not due or already claimed. Use the returned run ID and claim token when saving; reread research context after claiming.',
+  renew_digest_run: 'Extend a valid scheduled run lease by one hour before it expires. Changed settings invalidate the claim; stop on a conflict.',
+  skip_digest_run: 'Finish a claimed occurrence without an edition only when research found no suitable new items. Do not skip on tool/authentication failures; let the lease expire for retry.',
+  save_edition: 'Save a verified selection. Scheduled work must include run_id and claim_token and use run_id as request_key; saving atomically completes the occurrence and advances next_run_at. Reuse request_key on retries. Previously shown canonical URLs are rejected across all editions of this digest, including when update_note is supplied. Dates must be verified or omitted; date_kind labels publication, creation, release or update dates. Do not invent items to fill a quota.',
   save_feedback: 'UI-only: save the user’s actual vote. Never generate feedback on their behalf. Requires current feedback revision.',
   settings_read: 'Read native settings: choose the digest opened by default. Configure each digest’s prompt and preferred sources in its panel.',
   settings_update: 'Set the current user’s default digest. This does not switch the authenticated server connection.'
 };
-const writes = new Set(['create_digest', 'update_digest', 'save_edition', 'save_feedback', 'settings_update']);
+const writes = new Set(['create_digest', 'update_digest', 'save_edition', 'save_feedback', 'settings_update', 'list_due_digests', 'claim_digest_run', 'renew_digest_run', 'skip_digest_run']);
 export const TOOLS = Object.entries(schema).map(([name, inputSchema]) => ({
   name, title: name === 'open_digest' ? 'Digests' : name.replaceAll('_', ' '), description: descriptions[name], inputSchema,
   outputSchema: { type: 'object', additionalProperties: true },
