@@ -118,7 +118,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
   }
   function renderEditions() {
     const previous = $('edition-select').value; $('edition-select').replaceChildren();
-    for (const e of editions) option($('edition-select'), e.id, `${e.title} · ${e.item_count} items`);
+    for (const e of editions) option($('edition-select'), e.id, e.title);
     if (editions.some(e => e.id === previous)) $('edition-select').value = previous;
     $('older').hidden = nextEditionOffset === null;
   }
@@ -239,7 +239,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.2' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

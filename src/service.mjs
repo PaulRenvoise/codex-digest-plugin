@@ -1,6 +1,13 @@
 import { VERSION, DigestError, validateTool, normalizeDomains, normalizeSchedule, canonicalUrl, safeUrl, stableId, RESEARCH_GUIDELINES } from './contract.mjs';
 import { nextOccurrence } from './schedule.mjs';
 
+export function editionTitle(digest, createdAt, headline, itemCount) {
+  const localDate = new Date(new Date(createdAt).getTime() + digest.schedule.utc_offset_minutes * 60000).toISOString().slice(0, 10);
+  const cleanHeadline = headline.trim().replace(/^\d{4}-\d{2}-\d{2}\s+[-—–]\s+/, '').replace(/(?:^|\s+)[-—–]\s+\d+\s+items?$/i, '').trim();
+  if (!cleanHeadline) throw new DigestError('Provide a short headline describing the edition’s content.');
+  return `${localDate} - ${cleanHeadline} - ${itemCount} items`;
+}
+
 export class DigestService {
   constructor(db, owner, clock = () => new Date()) { this.db = db; this.owner = owner; this.clock = clock; }
   stmt(sql, ...args) { return this.db.prepare(sql).bind(...args); }
@@ -130,7 +137,7 @@ export class DigestService {
       const prior = await this.stmt('SELECT id FROM editions WHERE id = ? AND digest_id = ?', editionId, args.digest_id).first();
       if (prior) return this.edition(args.digest_id, prior.id);
       const statements = [this.stmt('INSERT INTO editions (id, digest_id, request_key, title, created_at) VALUES (?, ?, ?, ?, ?)',
-        editionId, args.digest_id, args.request_key, args.title.trim(), now)];
+        editionId, args.digest_id, args.request_key, editionTitle(digest, now, args.title, args.items.length), now)];
       const urls = new Set();
       for (const [position, item] of args.items.entries()) {
         const canonical = canonicalUrl(item.url);
