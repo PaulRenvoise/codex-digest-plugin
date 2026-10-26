@@ -181,3 +181,72 @@ test('creation and settings saves call the backend without sending conversation 
   assert.equal(legacyMessages, 0);
   assert.equal(field('request-text')?.value ?? '', '');
 });
+
+test('domain shortcut preserves fresh settings, deduplicates sources and recovers from conflicts', async () => {
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
+  const elements = new Map(), listeners = new Map(), messages = [], writes = [];
+  const element = () => ({ value: '', dataset: {}, children: [], style: { setProperty() {} }, classList: { toggle() {} },
+    append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; },
+    setAttribute() {}, showModal() { this.open = true; }, close() { this.open = false; } });
+  const document = { documentElement: element(), addEventListener() {}, createElement: element,
+    getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); } };
+  let current = { id: 'art', name: 'Art', prompt: 'Techniques', domains: ['github.com/artist'], revision: 1,
+    items_per_edition: 8, schedule: { frequency: 'weekly', weekday: 2, hour: 10, utc_offset_minutes: 120 } };
+  let rejectWrite = false;
+  const parent = { postMessage(message) {
+    messages.push(message); if (!message.id) return;
+    queueMicrotask(() => {
+      let result = {};
+      if (message.method === 'tools/call') {
+        const { name, arguments: args } = message.params;
+        let data;
+        if (name === 'list_digests') data = { digests: [{ ...current }] };
+        else if (name === 'settings_read') data = { values: {} };
+        else if (name === 'list_editions') data = { editions: [{ id: 'edition', title: 'Edition' }], next_offset: null };
+        else if (name === 'get_edition') data = { items: ['example.com', 'example.com', 'github.com', 'saved.com'].map((domain, i) => ({
+          url: `https://${domain}/article`, title: `Item ${i}`, kind: 'article', tags: [], summary: 'Summary'
+        })) };
+        else if (name === 'get_digest') data = { digest: { ...current } };
+        else if (name === 'update_digest') {
+          writes.push(args);
+          if (rejectWrite) result = { isError: true, content: [{ type: 'text', text: 'Revision conflict' }] };
+          else { current = { ...current, ...args, revision: current.revision + 1 }; data = { digest: current }; }
+        } else assert.fail(`Unexpected call ${name}`);
+        if (data) result = { structuredContent: data };
+      }
+      listeners.get('message')({ source: parent, data: { jsonrpc: '2.0', id: message.id, result } });
+    });
+  } };
+  const window = { parent, addEventListener(name, fn) { listeners.set(name, fn); } };
+  runInNewContext(html.split('<script>')[1].split('</script>')[0], { window, document, setTimeout, clearTimeout, URL, crypto: { randomUUID: () => 'key' } });
+  await new Promise(resolve => setImmediate(resolve));
+  const descendants = el => [el, ...el.children.flatMap(descendants)];
+  const buttons = descendants(elements.get('cards')).filter(el => el.className === 'add-source');
+  assert.equal(buttons.length, 4);
+  assert.equal(buttons[2].disabled, false, 'a creator URL does not mark the whole domain as preferred');
+  current = { ...current, name: 'Renamed elsewhere', prompt: 'Updated elsewhere', revision: 7, domains: [...current.domains, 'https://www.saved.com/'] };
+  const saving = buttons[0].onclick();
+  assert.ok(buttons.every(b => b.disabled), 'serialize additions within a digest');
+  await buttons[1].onclick(); await saving;
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].expected_revision, 7);
+  assert.equal(writes[0].name, 'Renamed elsewhere');
+  assert.equal(writes[0].prompt, 'Updated elsewhere');
+  assert.equal(writes[0].schedule, undefined, 'leave schedule and item count to the backend');
+  assert.deepEqual(Array.from(current.domains), ['github.com/artist', 'https://www.saved.com/', 'example.com']);
+  assert.equal(current.items_per_edition, 8);
+  assert.ok(buttons[0].disabled && buttons[1].disabled && buttons[3].disabled);
+  assert.equal(buttons[0].textContent, '✓');
+  await buttons[0].onclick();
+  assert.equal(writes.length, 1, 'already preferred sources are not saved twice');
+  elements.get('edit').onclick();
+  assert.match(elements.get('domains').value, /example.com/);
+  assert.equal(elements.get('name').value, 'Renamed elsewhere');
+  rejectWrite = true; await buttons[2].onclick();
+  assert.equal(buttons[2].disabled, false);
+  assert.equal(buttons[2].textContent, '+');
+  assert.equal(elements.get('status').textContent, 'Revision conflict');
+  rejectWrite = false; await buttons[2].onclick();
+  assert.equal(buttons[2].textContent, '✓');
+  assert.equal(messages.filter(m => m.method === 'ui/message').length, 0);
+});
