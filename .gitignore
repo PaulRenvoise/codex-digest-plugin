@@ -7,5 +7,5 @@ dist/
 *.sqlite*
 *.tar.gz
 .deployments/
-.openai/hosting.json
-!plugins/digests/templates/backend/.openai/hosting.json
+.digest-template.json
+.sites-runtime/

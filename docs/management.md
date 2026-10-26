@@ -1,11 +1,6 @@
----
-name: manage-digest
-description: Create or edit digest settings and cloud schedules, open editions, and inspect existing feedback through a connected Digests backend.
----
-
 # Manage digests
 
-Use the connected backend and its `backend_info`, `list_digests`, `get_digest` and `open_digest` tools. If the backend is missing, use setup-digest. Preserve the chosen backend across calls.
+Use the connected backend and its `backend_info`, `list_digests`, `get_digest` and `open_digest` tools. If the backend is missing, follow [deployment and connection](deployment.md). Preserve the chosen backend across calls.
 
 Each digest has a name, editorial prompt, non-exhaustive preferred sources, items_per_edition (1–30, default 12), and schedule. Express recency, depth, language and content types in the prompt. Accept domains or full source URLs; preserve creator, community and page paths. The API field remains `domains` for compatibility. Older clients may omit count and schedule on edits; preserve existing values.
 

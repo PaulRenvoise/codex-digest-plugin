@@ -1,9 +1,9 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { createWorker } from '../templates/backend/src/worker.mjs';
+import { createWorker } from '../src/worker.mjs';
 import { localDatabase } from './sqlite-d1.mjs';
 
-const worker = createWorker(await readFile(new URL('../templates/backend/ui/index.html', import.meta.url), 'utf8'));
+const worker = createWorker(await readFile(new URL('../ui/index.html', import.meta.url), 'utf8'));
 const db = localDatabase(process.env.DIGEST_DEV_DB || ':memory:');
 const port = Number(process.env.PORT || 4318);
 const server = createServer(async (incoming, outgoing) => {

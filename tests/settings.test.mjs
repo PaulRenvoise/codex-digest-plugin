@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { localDatabase } from '../scripts/sqlite-d1.mjs';
-import { DigestService } from '../templates/backend/src/service.mjs';
-import { normalizeSchedule } from '../templates/backend/src/contract.mjs';
+import { DigestService } from '../src/service.mjs';
+import { normalizeSchedule } from '../src/contract.mjs';
 
 const fields = { name: 'Game Dev', prompt: 'Find practical breakdowns.', domains: ['unity.com'] };
 test('count and all schedule modes persist and remain visible to research', async t => {
@@ -56,7 +56,7 @@ test('invalid counts and incomplete or out-of-range schedules are rejected witho
 test('migration upgrades legacy databases without losing digests and is safe to reopen', async t => {
   const folder = await mkdtemp(path.join(tmpdir(), 'digest-settings-')); t.after(() => rm(folder, { recursive: true, force: true }));
   const filename = path.join(folder, 'legacy.sqlite'), old = new DatabaseSync(filename);
-  old.exec(await readFile(new URL('../templates/backend/drizzle/0000_digest.sql', import.meta.url), 'utf8'));
+  old.exec(await readFile(new URL('../drizzle/0000_digest.sql', import.meta.url), 'utf8'));
   old.prepare('INSERT INTO digests (id,owner_id,name,prompt,domains,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').run('legacy', 'alice', 'Existing', 'Keep this prompt.', '[]', 'today', 'today');
   old.close();
   for (let pass = 0; pass < 2; pass++) {
@@ -72,7 +72,7 @@ test('migration upgrades legacy databases without losing digests and is safe to 
 test('schedule migration replaces retired defaults and preserves recurring settings and data', async t => {
   const folder = await mkdtemp(path.join(tmpdir(), 'digest-recurring-')); t.after(() => rm(folder, { recursive: true, force: true }));
   const filename = path.join(folder, 'prior.sqlite'), old = new DatabaseSync(filename);
-  for (const tag of ['0000_digest', '0001_digest_settings']) old.exec(await readFile(new URL(`../templates/backend/drizzle/${tag}.sql`, import.meta.url), 'utf8'));
+  for (const tag of ['0000_digest', '0001_digest_settings']) old.exec(await readFile(new URL(`../drizzle/${tag}.sql`, import.meta.url), 'utf8'));
   old.exec("CREATE TABLE _local_migrations (tag TEXT PRIMARY KEY); INSERT INTO _local_migrations VALUES ('0000_digest'), ('0001_digest_settings')");
   old.prepare('INSERT INTO digests (id,owner_id,name,prompt,domains,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').run('retired', 'alice', 'Existing', 'Keep this prompt.', '[]', 'today', 'today');
   const weekly = { frequency: 'weekly', hour: 16, utc_offset_minutes: 120, weekday: 2 };

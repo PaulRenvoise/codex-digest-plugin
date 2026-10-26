@@ -6,7 +6,7 @@ import { runInNewContext } from 'node:vm';
 // Exercise the real embedded script against a host that delivers both RPC replies
 // and tool lifecycle notifications, without a browser or network dependency.
 test('panel refreshes through data tools and honors host selection without reopening itself', async () => {
-  const html = await readFile(new URL('../templates/backend/ui/index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
   const elements = new Map(), listeners = new Map(), calls = [];
   const element = () => ({
     value: '', hidden: false, dataset: {}, style: { setProperty(name, value) { this[name] = value; } }, children: [], classList: { toggle() {} },

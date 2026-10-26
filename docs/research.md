@@ -1,11 +1,6 @@
----
-name: generate-digest
-description: Research and save a new edition of an existing Digest, using its prompt, preferred sources, prior links and user feedback. Use when the user asks for a digest or more discoveries.
----
-
 # Generate an edition
 
-Use the user's connected Digests backend. If no compatible backend is available, use setup-digest. Identify the digest from context or `list_digests`; ask only if the choice is ambiguous. Never mix identically named digests across backend connections.
+Use the user's connected Digests backend. If no compatible backend is available, follow [deployment and connection](deployment.md). Identify the digest from context or `list_digests`; ask only if the choice is ambiguous. Never mix identically named digests across backend connections.
 
 Read and follow the research guidance returned by `get_research_context`. The shared defaults are:
 - Read every page of saved history and feedback before selection. The prompt defines topics, depth, freshness and exclusions; preferred sources are a non-exhaustive watchlist. Search beyond them for new authors and sources.

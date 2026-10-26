@@ -1,5 +1,5 @@
 {
-  "name": "codex-digests-plugin",
+  "name": "codex-digests-site",
   "version": "0.3.1",
   "private": true,
   "type": "module",
@@ -7,9 +7,10 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --test plugins/digests/tests/*.test.mjs",
-    "check": "node plugins/digests/scripts/check-package.mjs",
-    "build": "node plugins/digests/templates/backend/scripts/build.mjs",
-    "dev": "node plugins/digests/scripts/dev.mjs"
-  }
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check-site.mjs",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "repository": "https://github.com/PaulRenvoise/codex-digests-site"
 }

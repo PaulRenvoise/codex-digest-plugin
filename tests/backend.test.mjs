@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { localDatabase } from '../scripts/sqlite-d1.mjs';
-import { DigestService } from '../templates/backend/src/service.mjs';
-import { canonicalUrl, normalizeDomains, TOOLS, UI_URI } from '../templates/backend/src/contract.mjs';
-import { createWorker } from '../templates/backend/src/worker.mjs';
+import { DigestService } from '../src/service.mjs';
+import { canonicalUrl, normalizeDomains, TOOLS, UI_URI } from '../src/contract.mjs';
+import { createWorker } from '../src/worker.mjs';
 import { Script } from 'node:vm';
 
 async function fixture(t) {
@@ -110,7 +110,7 @@ test('native default settings do not leak or alter another user’s preferences'
 });
 test('HTTP authentication, CSRF rejection and MCP resource/tool discovery', async t => {
   const { db } = await fixture(t);
-  const html = await readFile(new URL('../templates/backend/ui/index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
   new Script(html.split('<script>')[1].split('</script>')[0]);
   const worker = createWorker(html);
   const send = (body, headers = {}, route = '/mcp') => worker.fetch(new Request('https://digest.example' + route, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }), { DB: db });

@@ -3,12 +3,12 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const source = fileURLToPath(new URL('../templates/backend/', import.meta.url));
+const source = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
 const [targetArg, flag] = process.argv.slice(2);
-if (!targetArg || (flag && flag !== '--upgrade')) throw new Error('Usage: node scripts/materialize-backend.mjs /absolute/new/directory [--upgrade]');
+if (!targetArg || (flag && flag !== '--upgrade')) throw new Error('Usage: node scripts/prepare-site.mjs /absolute/new/directory [--upgrade]');
 if (!path.isAbsolute(targetArg)) throw new Error('Use an absolute destination path.');
 const target = path.resolve(targetArg);
-if (target === source || target.startsWith(source + path.sep)) throw new Error('The deployment must be outside the backend template.');
+if (target === source || (target.startsWith(source + path.sep) && !target.startsWith(path.join(source, '.deployments') + path.sep))) throw new Error('Use a separate checkout or a directory under .deployments.');
 const hash = text => createHash('sha256').update(text).digest('hex');
 async function files(dir, prefix = '') {
   const result = [];
@@ -21,7 +21,10 @@ async function files(dir, prefix = '') {
   }
   return result.sort();
 }
-const names = await files(source), contents = new Map();
+// Copy only distributable source; never recursively copy a developer's checkout.
+const names = ['package.json', '.gitignore', 'README.md', '.openai/hosting.json'];
+for (const directory of ['src', 'ui', 'drizzle', 'scripts', 'tests', 'docs']) names.push(...await files(path.join(source, directory), directory));
+const contents = new Map();
 for (const name of names) contents.set(name, await readFile(path.join(source, name), 'utf8'));
 const hosting = JSON.parse(contents.get('.openai/hosting.json'));
 if (hosting.project_id) throw new Error('The public template must not contain a Site identity.');
