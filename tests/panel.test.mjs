@@ -250,3 +250,40 @@ test('domain shortcut preserves fresh settings, deduplicates sources and recover
   assert.equal(buttons[2].textContent, '✓');
   assert.equal(messages.filter(m => m.method === 'ui/message').length, 0);
 });
+
+test('header fallback is limited to mobile fullscreen and yields to reported insets', async () => {
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
+  for (const embedded of [true, false]) {
+    const elements = new Map(), listeners = new Map();
+    const element = () => ({ value: '', dataset: {}, style: { setProperty(k, v) { this[k] = v; } },
+      classList: { toggle() {} }, append() {}, replaceChildren() {}, setAttribute() {} });
+    const document = { documentElement: element(), addEventListener() {}, createElement: element,
+      getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); } };
+    let mediaChange;
+    const media = { matches: true, addEventListener(name, fn) { mediaChange = fn; } };
+    const window = { matchMedia: () => media, addEventListener(name, fn) { listeners.set(name, fn); } };
+    const data = name => name === 'list_digests' ? { digests: [] } : { values: {} };
+    window.parent = embedded ? { postMessage(message) {
+      if (!message.id) return;
+      if (message.method === 'ui/initialize') assert.deepEqual(Array.from(message.params.appCapabilities.availableDisplayModes), ['fullscreen']);
+      queueMicrotask(() => listeners.get('message')({ source: window.parent, data: { jsonrpc: '2.0', id: message.id,
+        result: message.method === 'ui/initialize' ? { hostContext: { safeAreaInsets: { top: 0 } } } : { structuredContent: data(message.params.name) } } }));
+    } } : window;
+    runInNewContext(html.split('<script>')[1].split('</script>')[0], { window, document, setTimeout, clearTimeout, URL,
+      fetch: async (url, options) => ({ ok: true, json: async () => data(JSON.parse(options.body).name) }) });
+    await new Promise(resolve => setImmediate(resolve));
+    const fallback = () => document.documentElement.dataset.headerFallback;
+    assert.equal(fallback(), String(embedded), 'zero/absent insets get a fallback only in an embedded phone view');
+    const globals = value => listeners.get('openai:set_globals')({ detail: { globals: value } });
+    globals({ safeArea: { insets: { top: 132 } } });
+    assert.equal(fallback(), 'false', 'reported spacing replaces, rather than adds to, the fallback');
+    globals({ safeArea: { insets: { top: 0 } }, displayMode: 'inline' });
+    assert.equal(fallback(), 'false');
+    globals({ displayMode: 'fullscreen', userAgent: { device: { type: 'desktop' } } });
+    assert.equal(fallback(), 'false', 'narrow desktop panels do not get mobile padding');
+    globals({ platform: 'mobile' });
+    assert.equal(fallback(), String(embedded));
+    globals({ platform: 'web' }); media.matches = false; mediaChange();
+    assert.equal(fallback(), 'false', 'viewport changes clear inferred mobile state');
+  }
+});
