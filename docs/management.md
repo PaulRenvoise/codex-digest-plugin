@@ -10,7 +10,9 @@ Show editions through `open_digest`. Votes belong to their digest; they are evid
 
 ## Apply a schedule
 
-Saving cadence records desired timing. It does not create or confirm a scheduler job. The panel sends an explicit schedule request to the current chat when the user saves a changed cadence. Use the latest get_digest result, not stale form contents.
+Saving cadence records desired timing only. Creation and settings saves use direct MCP calls and never send conversation messages or create/update scheduled jobs. Only apply a schedule after a separate explicit user request. Use the latest get_digest result, not stale form contents.
+
+As checked on 2026-10-26, the available Sites surface exposes `create_schedule` to the assistant. The Sites runtime documentation does not provide a backend scheduler API/binding, and the connector eligibility discovery tool is unavailable in this environment, so a scheduler connector cannot be verified. This is a limit of the currently verified integration, not proof that no future or account-specific capability exists. Do not invent internal endpoints, forward session credentials, or deploy a fake scheduler. See [Sites management](https://learn.chatgpt.com/docs/sites/managing-a-site) and [scheduled tasks](https://learn.chatgpt.com/docs/automations).
 
 - Resolve the connected backend's Site through Sites inventory and read its linked automations. Reuse the task titled `Digest [<full digest ID>]`; preserve the Site link and do not identify a task by a mutable digest name alone.
 - Use Sites cloud scheduling so the computer can be off. Read the installed Sites recurring-update instructions and verify unattended source access and a write/readback before enabling. If a matching job needs editing and no supported update control is available, report the blocker; do not create a replacement alongside it.

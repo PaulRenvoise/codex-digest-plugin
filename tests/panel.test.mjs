@@ -65,3 +65,78 @@ test('panel refreshes through data tools and honors host selection without reope
   assert.equal(calls.filter(c => c.name === 'list_editions').length, 3);
   assert.equal(calls.some(c => c.name === 'open_digest'), false);
 });
+
+test('creation and settings saves call the backend without sending conversation messages', async () => {
+  const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
+  const elements = new Map(), listeners = new Map(), messages = [], writes = [], digests = [];
+  const element = () => ({
+    value: '', dataset: {}, style: { setProperty() {} }, classList: { toggle() {} },
+    append() {}, replaceChildren() {}, setAttribute() {},
+    showModal() { this.open = true; }, close() { this.open = false; }
+  });
+  const document = {
+    documentElement: element(), addEventListener() {}, createElement: element,
+    getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }
+  };
+  let rejectWrite = false;
+  const parent = { postMessage(message) {
+    messages.push(message);
+    if (!message.id) return;
+    queueMicrotask(() => {
+      let result = {};
+      if (message.method === 'tools/call') {
+        const { name, arguments: args } = message.params;
+        let data;
+        if (name === 'list_digests') data = { digests };
+        else if (name === 'settings_read') data = { values: {} };
+        else if (name === 'list_editions') data = { editions: [], next_offset: null };
+        else if (['create_digest', 'update_digest'].includes(name)) {
+          writes.push({ name, args });
+          if (rejectWrite) result = { isError: true, content: [{ type: 'text', text: 'Revision conflict' }] };
+          else {
+            const digest = { ...args, id: 'created', revision: (digests[0]?.revision ?? 0) + 1 };
+            digests.splice(0, digests.length, digest); data = { digest };
+          }
+        } else assert.fail(`Unexpected tool: ${name}`);
+        if (data) result = { structuredContent: data };
+      }
+      listeners.get('message')({ source: parent, data: { jsonrpc: '2.0', id: message.id, result } });
+    });
+  } };
+  let legacyMessages = 0;
+  const window = { parent, openai: { sendFollowUpMessage() { legacyMessages++; } },
+    addEventListener(name, callback) { listeners.set(name, callback); } };
+  runInNewContext(html.split('<script>')[1].split('</script>')[0], {
+    window, document, setTimeout, clearTimeout, URL, crypto: { randomUUID: () => 'create-key' }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  const field = id => elements.get(id);
+  const submit = () => field('digest-form').onsubmit({ preventDefault() {} });
+  field('new').onclick();
+  field('name').value = 'Art'; field('prompt').value = 'New drawing techniques'; field('domains').value = 'example.com';
+  await submit();
+  assert.equal(writes[0].name, 'create_digest');
+  assert.equal(field('editor').open, false);
+  assert.match(field('status').textContent, /No scheduled job was created/);
+
+  field('edit').onclick();
+  field('frequency').value = 'weekly'; field('weekday').value = '2'; field('hour').value = '10'; field('utc-offset').value = '2';
+  await submit();
+  assert.equal(writes[1].name, 'update_digest');
+  assert.deepEqual(JSON.parse(JSON.stringify(writes[1].args.schedule)), {
+    frequency: 'weekly', hour: 10, utc_offset_minutes: 120, weekday: 2
+  });
+  assert.equal(writes[1].args.expected_revision, 1);
+  assert.match(field('status').textContent, /Scheduled jobs were not changed/);
+
+  field('edit').onclick(); field('item-count').value = '5'; await submit();
+  assert.equal(writes[2].args.items_per_edition, 5);
+  rejectWrite = true;
+  field('edit').onclick(); field('hour').value = '11'; await submit();
+  assert.equal(field('editor').open, true);
+  assert.equal(field('form-error').textContent, 'Revision conflict');
+  assert.equal(field('save-digest').disabled, false);
+  assert.equal(messages.filter(m => m.method === 'ui/message').length, 0);
+  assert.equal(legacyMessages, 0);
+  assert.equal(field('request-text')?.value ?? '', '');
+});

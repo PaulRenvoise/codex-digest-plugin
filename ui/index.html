@@ -185,7 +185,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     $('schedule-help').hidden = false;
     $('weekday-field').hidden = frequency !== 'weekly'; $('monthday-field').hidden = frequency !== 'monthly';
     $('monthday').disabled = frequency !== 'monthly'; $('monthday').required = frequency === 'monthly';
-    $('schedule-help').textContent = `Fixed UTC offset. ${frequency === 'monthly' ? 'Shorter months use their last day. ' : ''}Saving requests setup in ChatGPT. Check the job status there.`;
+    $('schedule-help').textContent = `Fixed UTC offset. ${frequency === 'monthly' ? 'Shorter months use their last day. ' : ''}Saved timing only; scheduled jobs are managed separately.`;
   }
   function formSchedule() {
     const frequency = $('frequency').value;
@@ -209,13 +209,10 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     event.preventDefault(); $('save-digest').disabled = true; $('form-error').textContent = '';
     const fields = { name: $('name').value, prompt: $('prompt').value, domains: $('domains').value.split(/\n+/).map(s => s.trim()).filter(Boolean),
       items_per_edition: Number($('item-count').value), schedule: formSchedule() };
-    const oldSchedule = editorDigest?.schedule ?? null;
-    const scheduleChanged = JSON.stringify(oldSchedule) !== JSON.stringify(fields.schedule);
     try {
       const data = editorDigest ? await call('update_digest', { ...fields, digest_id: editorDigest.id, expected_revision: editorDigest.revision }) : await call('create_digest', { ...fields, request_key: createKey });
       $('editor').close(); await loadLibrary(data.digest.id);
-      if (scheduleChanged) await sendPrompt(`Apply the saved schedule for my digest ${JSON.stringify(data.digest.name)} (digest_id: ${data.digest.id}). Read its current configuration and use the connected Digests backend's Sites cloud scheduler. The saved schedule is ${JSON.stringify(data.digest.schedule)}. Check linked jobs and update the existing one rather than creating duplicates. Keep the fixed UTC offset and use the last day of shorter months for monthly dates. Each run must reread the prompt, items_per_edition, history and votes, and skip if the saved schedule no longer matches. Confirm the actual job status; don't report it active merely because settings were saved.`, 'Settings saved. Schedule request sent to ChatGPT; check its confirmation.');
-      else status('Settings saved.');
+      status(editorDigest ? 'Settings saved. Scheduled jobs were not changed.' : 'Digest created. No scheduled job was created.');
     } catch (error) { $('form-error').textContent = error.message; }
     finally { $('save-digest').disabled = false; }
   };
@@ -242,7 +239,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.3.2' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

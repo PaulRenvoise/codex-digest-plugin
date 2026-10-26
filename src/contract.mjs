@@ -1,4 +1,4 @@
-export const VERSION = '0.3.1';
+export const VERSION = '0.3.2';
 export const RESEARCH_GUIDELINES = `Research rules for every digest:
 - Read every page of saved history and feedback before selection. The prompt defines topics, depth, freshness and exclusions; preferred sources are a non-exhaustive watchlist. Search beyond them for new authors and sources.
 - Directly open every candidate link. Confirm it is reachable, resolves to the intended substantive content, and supports its title and summary. Omit unverified links; do not infer verification from a search snippet. If browsing is unavailable, explain the limitation instead of inventing an edition.
@@ -53,7 +53,7 @@ const descriptions = {
   list_digests: 'List the current user’s digests.',
   open_digest: 'Open the Digests library in the sidebar or beside this conversation. Pass a digest ID when known.',
   create_digest: 'Create a digest with prompt, preferred sources, target item count and desired frequency. Frequency needs a separate cloud schedule; this tool does not activate one. Reuse request_key on retries.',
-  update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. Frequency changes must also be applied to its cloud job.',
+  update_digest: 'Edit a digest’s configuration with the current revision. Omitted count and schedule are preserved. This only saves settings; it does not change cloud jobs. Apply scheduling only on a separate explicit request.',
   get_digest: 'Read the current digest configuration and revision.',
   list_editions: 'Read dated editions, 30 at a time; continue with next_offset.',
   get_edition: 'Read an edition’s article cards and current feedback.',
