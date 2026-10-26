@@ -318,10 +318,9 @@ dialog{inset:calc(var(--inset-top) + 12px) calc(var(--inset-right) + 12px) calc(
     if (m.method === 'ui/notifications/host-context-changed') applyHostContext(m.params);
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
   window.addEventListener('openai:set_globals', event => applyHostContext(event.detail?.globals, 'legacy'));
   applyHostContext(window.openai, 'legacy');
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.9' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.10' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

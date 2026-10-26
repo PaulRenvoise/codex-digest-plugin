@@ -48,7 +48,7 @@ for (const standardBridge of [true, false]) test(`ChatGPT safe areas survive ini
 // and tool lifecycle notifications, without a browser or network dependency.
 test('panel refreshes through data tools and honors host selection without reopening itself', async () => {
   const html = await readFile(new URL('../ui/index.html', import.meta.url), 'utf8');
-  const elements = new Map(), listeners = new Map(), calls = [];
+  const elements = new Map(), listeners = new Map(), documentListeners = new Map(), calls = [];
   const element = () => ({
     value: '', hidden: false, dataset: {}, style: { setProperty(name, value) { this[name] = value; } }, children: [], classList: { toggle() {} },
     append(...children) { this.children.push(...children); },
@@ -75,7 +75,7 @@ test('panel refreshes through data tools and honors host selection without reope
   const document = {
     documentElement: element(), hidden: false,
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
-    createElement: element, addEventListener() {}
+    createElement: element, addEventListener(name, fn) { documentListeners.set(name, fn); }
   };
   const window = { parent, addEventListener(name, callback) { listeners.set(name, callback); } };
   runInNewContext(html.split('<script>')[1].split('</script>')[0], { window, document, setTimeout, clearTimeout, URL });
@@ -101,6 +101,14 @@ test('panel refreshes through data tools and honors host selection without reope
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(elements.get('digest-select').value, 'second');
   assert.equal(calls.at(-1).args.digest_id, 'second');
+  const readsBeforeFocus = calls.length;
+  for (let cycle = 0; cycle < 3; cycle++) {
+    document.hidden = true; documentListeners.get('visibilitychange')?.(); listeners.get('blur')?.();
+    document.hidden = false; documentListeners.get('visibilitychange')?.(); listeners.get('focus')?.();
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(calls.length, readsBeforeFocus, 'switching away and back does not reload the library');
+  assert.equal(elements.get('digest-select').value, 'second');
   await elements.get('refresh').onclick();
   assert.equal(elements.get('digest-select').value, 'second');
   assert.equal(calls.filter(c => c.name === 'list_digests').length, 2);
