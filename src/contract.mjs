@@ -1,4 +1,4 @@
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 export const RESEARCH_GUIDELINES = `Research rules for every digest:
 - Read every page of saved history and feedback before selection. The prompt defines topics, depth, freshness and exclusions; preferred sources are a non-exhaustive watchlist. Search beyond them for new authors and sources.
 - Directly open every candidate link. Confirm it is reachable, resolves to the intended substantive content, and supports its title and summary. Omit unverified links; do not infer verification from a search snippet. If browsing is unavailable, explain the limitation instead of inventing an edition.

@@ -6,7 +6,7 @@
 @media(prefers-color-scheme:dark){:root{--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}}
 :root[data-theme="light"]{color-scheme:light;--bg:#fff;--ink:#222;--muted:#777;--line:#ddd;--soft:#eee}
 :root[data-theme="dark"]{color-scheme:dark;--bg:#202020;--ink:#eee;--muted:#aaa;--line:#444;--soft:#383838}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:850px;margin:auto;padding:16px}button,input,select,textarea{font:inherit;color:inherit}button{padding:8px 12px;min-height:40px;background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer}button:hover{background:var(--soft)}button:disabled{opacity:.5;cursor:wait}button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}.primary{background:var(--ink);color:var(--bg)}input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;max-width:100%;font:inherit}textarea{width:100%;resize:vertical}.toolbar,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar select,.controls select{flex:1;min-width:120px}#status{font-size:12px;color:var(--muted);margin:8px 0}#status:empty{display:none}#status.error,#form-error{color:#c44}.card{padding:18px 0;border-bottom:1px solid var(--line)}.meta{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;color:var(--muted)}.card h2{font-size:17px;line-height:1.4;margin:8px 0;font-weight:600}.card a{color:inherit;text-decoration:none}.card a:hover{text-decoration:underline}.summary{margin:8px 0 12px}.tags{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:11px;margin-bottom:10px}.tag{padding:2px 6px;background:var(--soft);border-radius:4px}.actions{margin:0}.actions button{min-width:42px;font-size:17px}.update,.help{font-size:12px;color:var(--muted)}.empty{padding:25px 0;color:var(--muted)}dialog{width:min(540px,calc(100% - 24px));max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px}dialog::backdrop{background:#0005}dialog h2{font-size:18px;margin:0 0 15px}form label{display:block;margin:14px 0 5px;font-weight:600}form input{width:100%}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}[hidden]{display:none!important}@media(max-width:440px){main{padding:12px}.toolbar{gap:6px}.toolbar button{padding:8px}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main{max-width:850px;margin:auto;padding:16px}button,input,select,textarea{font:inherit;color:inherit}button{padding:8px 12px;min-height:40px;background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer}button:hover{background:var(--soft)}button:disabled{opacity:.5;cursor:wait}button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}.primary{background:var(--ink);color:var(--bg)}input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;max-width:100%;font:inherit}textarea{width:100%;resize:vertical}.toolbar,.controls,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar select,.controls select{flex:1;min-width:120px}#status{font-size:12px;color:var(--muted);margin:8px 0}#status:empty{display:none}#status.error,#form-error{color:#c44}.card{padding:18px 0;border-bottom:1px solid var(--line)}.meta{display:flex;flex-wrap:wrap;gap:7px;font-size:12px;color:var(--muted)}.card h2{font-size:17px;line-height:1.4;margin:0 0 8px;font-weight:600}.card a{color:inherit;text-decoration:none}.card a:hover{text-decoration:underline}.summary{margin:8px 0 12px}.tags{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:11px;margin-bottom:10px}.tag{padding:2px 6px;background:var(--soft);border-radius:4px}article.card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:start}.card-content{min-width:0}.actions{margin:0;flex-direction:column;flex-wrap:nowrap;align-items:stretch}.actions button{width:44px;min-height:44px;padding:6px;font-size:17px}@media(max-width:440px){article.card{gap:10px}}.update,.help{font-size:12px;color:var(--muted)}.empty{padding:25px 0;color:var(--muted)}dialog{width:min(540px,calc(100% - 24px));max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px}dialog::backdrop{background:#0005}dialog h2{font-size:18px;margin:0 0 15px}form label{display:block;margin:14px 0 5px;font-weight:600}form input{width:100%}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}[hidden]{display:none!important}@media(max-width:440px){main{padding:12px}.toolbar{gap:6px}.toolbar button{padding:8px}}
 .schedule-row{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;white-space:nowrap;overflow-x:auto;padding-bottom:2px}.schedule-row>*{flex-shrink:0}.schedule-row label{margin:0;font-weight:400}.schedule-row input{width:58px}.schedule-row select{flex:0 0 auto;padding:9px 5px}.schedule-field{display:flex;gap:6px;align-items:center}#frequency{width:auto}#item-count{width:90px}
 /* The host reserves space for its header and mobile system controls. Keep the
    scrolling library and top-layer dialog inside the same safe rectangle. */
@@ -135,7 +135,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     for (const item of items) $('cards').append(card(item, digestId));
   }
   function card(item, digestId) {
-    const article = node('article', undefined, 'card'), meta = node('div', undefined, 'meta');
+    const article = node('article', undefined, 'card'), content = node('div', undefined, 'card-content'), meta = node('div', undefined, 'meta');
     let linkUrl; try { linkUrl = new URL(item.url); } catch { return node('p', 'Invalid item URL.'); }
     if (!['http:', 'https:'].includes(linkUrl.protocol)) return node('p', 'Unsupported item URL.');
     meta.append(node('span', linkUrl.hostname.replace(/^www\./, '')), node('span', '·'), node('span', item.kind));
@@ -144,9 +144,9 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
       meta.append(node('span', '·'), node('span', label ? `${label} ${item.published_at}` : item.published_at));
     }
     const heading = node('h2'), link = node('a', item.title); link.href = linkUrl.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; heading.append(link);
-    article.append(meta, heading, node('p', item.summary, 'summary'));
-    if (item.update_note) article.append(node('p', `Updated: ${item.update_note}`, 'update'));
-    const tags = node('div', undefined, 'tags'); for (const tag of item.tags) tags.append(node('span', tag, 'tag')); article.append(tags);
+    content.append(heading, node('p', item.summary, 'summary'));
+    if (item.update_note) content.append(node('p', `Updated: ${item.update_note}`, 'update'));
+    const tags = node('div', undefined, 'tags'); for (const tag of item.tags) tags.append(node('span', tag, 'tag')); content.append(tags, meta);
     const actions = node('div', undefined, 'actions'), up = node('button', '↑'), down = node('button', '↓');
     up.setAttribute('aria-label', 'Upvote'); down.setAttribute('aria-label', 'Downvote');
     up.title = 'Upvote'; down.title = 'Downvote';
@@ -162,7 +162,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     }
     up.onclick = () => feedback(item.vote === 1 ? 0 : 1);
     down.onclick = () => feedback(item.vote === -1 ? 0 : -1);
-    paint(); actions.append(up, down); article.append(actions); return article;
+    paint(); actions.append(up, down); article.append(actions, content); return article;
   }
 
   async function sendPrompt(prompt, sentMessage = 'Request sent. Refresh when the new edition is ready.') {
@@ -239,7 +239,7 @@ dialog{inset:calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(va
     if (['ping', 'ui/resource-teardown'].includes(m.method) && m.id !== undefined) post({ id: m.id, result: {} });
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('editor').open) loadLibrary(selectedId); });
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.1' }, appCapabilities: {}, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();
