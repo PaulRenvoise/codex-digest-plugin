@@ -1,4 +1,9 @@
-export const VERSION = '0.4.13';
+export const VERSION = '0.4.14';
+// Embed the sidebar icon so it remains available without a separate authenticated fetch.
+const ICONS = ['light', 'dark'].map(theme => ({
+  src: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="${theme === 'dark' ? '#f5f5f5' : '#242424'}" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h13v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7h2V3Z"/><path d="M4 7v8M11 6h3M11 9h3M7 12h7M7 15h7"/><rect x="7" y="6" width="2" height="3" rx=".3"/></svg>`),
+  mimeType: 'image/svg+xml', sizes: ['any'], theme
+}));
 export const RESEARCH_GUIDELINES = `Research rules for every digest:
 - Read every page of saved history and feedback before selection. The prompt defines topics, depth, freshness and exclusions; preferred sources are a non-exhaustive watchlist. Search beyond them for new authors and sources.
 - Directly open every candidate link. Confirm it is reachable, resolves to the intended substantive content, and supports its title and summary. Omit unverified links; do not infer verification from a search snippet. If browsing is unavailable, explain the limitation instead of inventing an edition.
@@ -78,7 +83,7 @@ export const TOOLS = Object.entries(schema).map(([name, inputSchema]) => ({
   outputSchema: { type: 'object', additionalProperties: true },
   annotations: { readOnlyHint: !writes.has(name), destructiveHint: false, openWorldHint: false, idempotentHint: true },
   _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true },
-  ...(name === 'open_digest' ? { _meta: {
+  ...(name === 'open_digest' ? { icons: ICONS, _meta: {
     ui: { resourceUri: UI_URI }, 'openai/outputTemplate': UI_URI, 'openai/widgetAccessible': true,
     'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] }
   } } : {}),
