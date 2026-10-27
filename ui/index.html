@@ -27,8 +27,8 @@ dialog{inset:calc(var(--inset-top) + 12px) calc(var(--inset-right) + 12px) calc(
     <div class="toolbar" id="digest-toolbar">
       <select id="digest-select" aria-label="Select digest"></select>
       <button id="edit" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
-      <button id="generate" class="primary icon-button" aria-label="Run digest now" title="Run digest now"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m8 5 11 7-11 7Z"/></svg></button>
       <button id="refresh" class="quiet icon-button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"/></svg></button>
+      <button id="generate" class="primary icon-button" aria-label="Run digest now" title="Run digest now"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m8 5 11 7-11 7Z"/></svg></button>
     </div>
     <div class="controls" id="edition-controls"><select id="edition-select" aria-label="Select edition"></select><button id="older" hidden>Older editions</button></div>
   </div>
@@ -320,7 +320,7 @@ dialog{inset:calc(var(--inset-top) + 12px) calc(var(--inset-right) + 12px) calc(
   });
   window.addEventListener('openai:set_globals', event => applyHostContext(event.detail?.globals, 'legacy'));
   applyHostContext(window.openai, 'legacy');
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.12' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.13' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();
