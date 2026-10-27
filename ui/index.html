@@ -320,7 +320,7 @@ dialog{inset:calc(var(--inset-top) + 12px) calc(var(--inset-right) + 12px) calc(
   });
   window.addEventListener('openai:set_globals', event => applyHostContext(event.detail?.globals, 'legacy'));
   applyHostContext(window.openai, 'legacy');
-  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.14' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
+  if (embedded) rpc('ui/initialize', { appInfo: { name: 'Digests', version: '0.4.15' }, appCapabilities: { availableDisplayModes: ['fullscreen'] }, protocolVersion: '2026-01-26' }, 8000)
     .then(result => { bridgeReady = true; post({ method: 'ui/notifications/initialized' }); applyHostContext(result?.hostContext); loadLibrary(selectedId); })
     .catch(() => { if (window.openai?.callTool) loadLibrary(); else status('Open Digests through its connected plugin to load your library.', true); });
   else loadLibrary();

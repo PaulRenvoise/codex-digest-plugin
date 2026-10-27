@@ -1,4 +1,4 @@
-import { VERSION, UI_URI, TOOLS, DigestError, RESEARCH_GUIDELINES } from './contract.mjs';
+import { VERSION, UI_URI, TOOLS, ICONS, DigestError, RESEARCH_GUIDELINES } from './contract.mjs';
 import { DigestService } from './service.mjs';
 
 export const SERVER_INSTRUCTIONS = `Digests stores personal digests, editions and feedback. ${RESEARCH_GUIDELINES}
@@ -6,6 +6,7 @@ Save verified items with save_edition, then open_digest. Never call save_feedbac
 Generate stable request keys and reuse them on retries. Create/update configuration only when requested. Saves never send conversation messages or edit cloud jobs. One shared Sites cloud task checks all digests hourly; do not create per-digest schedules. The backend computes next_run_at using each saved daily, weekly or monthly frequency, fixed UTC offset, and last-day clamping. Verify cloud read/write access before enabling the shared task, and check linked automations to avoid duplicates.
 For each hourly run call list_due_digests once, then claim_digest_run for each returned digest with a fresh attempt request_key (reuse it only on retries). Skip run:null and already completed/skipped claims. Read all research context pages after claiming, use current settings, search and verify original sources, then save_edition with run_id, claim_token and request_key equal to run_id. Renew with renew_digest_run before the one-hour lease expires if research takes longer. A changed setting invalidates old claims; discard stale work on conflict. Only call skip_digest_run if research succeeds but finds no suitable new items; on tool/authentication failure leave the occurrence for a later retry. Save and completion are atomic; delayed runs produce one edition, not a backlog. Read the saved edition back. Do not republish the Site, change digest settings or create tasks during routine runs. No user notification is needed when nothing is due.`;
 const capabilities = { tools: {}, resources: {}, 'openai/settings': { readTool: 'settings_read', updateTool: 'settings_update' } };
+const serverInfo = { name: 'Digests', version: VERSION, icons: ICONS };
 const MIME = 'text/html;profile=mcp-app';
 // MCP 2026-07-28 requires cache hints on discovery, list and resource results.
 const CACHE_HINT = { ttlMs: 0, cacheScope: 'private' };
@@ -57,15 +58,15 @@ export function createWorker(html) {
         return json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Request ID required.' } }, 400);
       }
       const result = async () => {
-        if (message.method === 'initialize') return { protocolVersion: '2025-06-18', capabilities, serverInfo: { name: 'Digests', version: VERSION }, instructions: SERVER_INSTRUCTIONS };
-        if (message.method === 'server/discover') return { ...CACHE_HINT, supportedVersions: ['2026-07-28'], capabilities, serverInfo: { name: 'Digests', version: VERSION }, instructions: SERVER_INSTRUCTIONS };
+        if (message.method === 'initialize') return { protocolVersion: '2025-06-18', capabilities, serverInfo, instructions: SERVER_INSTRUCTIONS };
+        if (message.method === 'server/discover') return { ...CACHE_HINT, supportedVersions: ['2026-07-28'], capabilities, serverInfo, _meta: { 'io.modelcontextprotocol/serverInfo': serverInfo }, instructions: SERVER_INSTRUCTIONS };
         if (message.method === 'ping') return {};
         if (message.method === 'tools/list') return { ...CACHE_HINT, tools: TOOLS };
         if (message.method === 'resources/list') return { ...CACHE_HINT, resources: [{ uri: UI_URI, name: 'Digests library', mimeType: MIME }] };
         if (message.method === 'resources/templates/list') return { ...CACHE_HINT, resourceTemplates: [] };
         if (message.method === 'resources/read') {
           // Existing conversations retain the original descriptor until refreshed.
-          if (![UI_URI, 'ui://digest/library.html', 'ui://digest/library-0.1.1.html', 'ui://digest/library-0.2.0.html', 'ui://digest/library-0.2.1.html', 'ui://digest/library-0.2.2.html', 'ui://digest/library-0.2.3.html', 'ui://digest/library-0.2.4.html', 'ui://digest/library-0.2.5.html', 'ui://digest/library-0.3.0.html', 'ui://digest/library-0.3.1.html', 'ui://digest/library-0.3.2.html', 'ui://digest/library-0.4.0.html', 'ui://digest/library-0.4.1.html', 'ui://digest/library-0.4.2.html', 'ui://digest/library-0.4.3.html', 'ui://digest/library-0.4.4.html', 'ui://digest/library-0.4.5.html', 'ui://digest/library-0.4.6.html', 'ui://digest/library-0.4.7.html', 'ui://digest/library-0.4.8.html', 'ui://digest/library-0.4.9.html', 'ui://digest/library-0.4.10.html', 'ui://digest/library-0.4.11.html', 'ui://digest/library-0.4.12.html', 'ui://digest/library-0.4.13.html'].includes(message.params?.uri)) throw new DigestError('Resource not found.', 404);
+          if (![UI_URI, 'ui://digest/library.html', 'ui://digest/library-0.1.1.html', 'ui://digest/library-0.2.0.html', 'ui://digest/library-0.2.1.html', 'ui://digest/library-0.2.2.html', 'ui://digest/library-0.2.3.html', 'ui://digest/library-0.2.4.html', 'ui://digest/library-0.2.5.html', 'ui://digest/library-0.3.0.html', 'ui://digest/library-0.3.1.html', 'ui://digest/library-0.3.2.html', 'ui://digest/library-0.4.0.html', 'ui://digest/library-0.4.1.html', 'ui://digest/library-0.4.2.html', 'ui://digest/library-0.4.3.html', 'ui://digest/library-0.4.4.html', 'ui://digest/library-0.4.5.html', 'ui://digest/library-0.4.6.html', 'ui://digest/library-0.4.7.html', 'ui://digest/library-0.4.8.html', 'ui://digest/library-0.4.9.html', 'ui://digest/library-0.4.10.html', 'ui://digest/library-0.4.11.html', 'ui://digest/library-0.4.12.html', 'ui://digest/library-0.4.13.html', 'ui://digest/library-0.4.14.html'].includes(message.params?.uri)) throw new DigestError('Resource not found.', 404);
           return { ...CACHE_HINT, contents: [{ uri: message.params.uri, mimeType: MIME, text: html,
             _meta: {
               ui: { prefersBorder: false, csp: { connectDomains: [], resourceDomains: [] } },

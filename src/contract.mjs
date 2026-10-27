@@ -1,7 +1,7 @@
-export const VERSION = '0.4.14';
+export const VERSION = '0.4.15';
 // Embed the sidebar icon so it remains available without a separate authenticated fetch.
-const ICONS = ['light', 'dark'].map(theme => ({
-  src: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="${theme === 'dark' ? '#f5f5f5' : '#242424'}" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h13v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7h2V3Z"/><path d="M4 7v8M11 6h3M11 9h3M7 12h7M7 15h7"/><rect x="7" y="6" width="2" height="3" rx=".3"/></svg>`),
+export const ICONS = ['light', 'dark'].map(theme => ({
+  src: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="${theme === 'dark' ? '#f5f5f5' : '#242424'}" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h13v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7h2V3Z"/><path d="M4 7v8M11 6h3M11 9h3M7 12h7M7 15h7"/><rect x="7" y="6" width="2" height="3" rx=".3"/></svg>`),
   mimeType: 'image/svg+xml', sizes: ['any'], theme
 }));
 export const RESEARCH_GUIDELINES = `Research rules for every digest:
