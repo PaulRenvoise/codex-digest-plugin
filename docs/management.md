@@ -25,6 +25,6 @@ Use a self-contained task prompt scoped to the linked Site:
 Backend behavior:
 - `next_run_at` is calculated from the saved daily, weekly or monthly schedule, using fixed UTC offsets and last-day clamping for shorter months. New settings take effect immediately; unrelated edits preserve the next due time.
 - Claims last one hour and can be renewed. An expired claim can be retried with a new attempt key; the old worker cannot complete it after another worker takes over. Settings revisions invalidate in-flight work.
-- Saving the edition, completing the claim and advancing the next occurrence are one database transaction. Retries return the same edition. Manual Find more editions do not consume scheduled occurrences.
+- Saving the edition, completing the claim and advancing the next occurrence are one database transaction. Retries return the same edition. Manual Run digest now editions do not consume scheduled occurrences.
 - A delayed successful run advances to the next future occurrence, rather than generating a backlog. Failed runs remain due; successful research with no suitable items advances without an empty edition.
 - The task checks hourly; research and scheduler delays mean completion is not guaranteed at the exact configured hour. Pause/resume the shared task through Scheduled. A saved next-run time alone does not prove the cloud task is enabled.

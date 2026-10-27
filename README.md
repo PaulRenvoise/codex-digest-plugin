@@ -20,7 +20,7 @@ Already have a Digests Site? Ask the assistant to upgrade it using this reposito
 - **Preferred sources:** domains or URLs, including specific creators and communities; research also explores other sources.
 - **Items per edition:** 1–30, with fewer when quality warrants it.
 - **Frequency:** daily, weekly, or monthly, at an hour and fixed UTC offset.
-- **Find more:** request a new edition. Earlier editions remain available.
+- **Run digest now:** request a new edition. Earlier editions remain available.
 - **Votes:** upvote or downvote; click again to clear.
 
 Research instructions come from the backend: verify original links and dates, diversify sources, and avoid previously included items. Canonical URL uniqueness is enforced per digest. See [research rules](docs/research.md).
